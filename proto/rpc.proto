@@ -1,0 +1,17 @@
+package net.notdot.protorpc;
+
+message Request {
+  required string method = 1;
+  required bytes body = 2;
+}
+
+message Response {
+  enum ResponseType {
+    OK = 0;
+    FAILED = 1;
+  }
+  
+  required ResponseType status = 1 [default=OK];
+  optional bytes body = 2;
+  optional string error = 3;
+}

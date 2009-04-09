@@ -1,0 +1,273 @@
+// Copyright 2006-2008 Google Inc. All Rights Reserved.
+
+syntax = "proto2";
+
+package appengine_entity;
+
+option perl_message_package = "AppEngine::Service::Entity";
+option perl_file_package = "AppEngine::Service::Entity";
+
+// The PropertyValue PB represents a property value.
+// One and only one of the value fields should be set. This is
+// enforced in code.
+message PropertyValue {
+  // primitives
+  optional int64 int64Value = 1;
+  optional bool booleanValue = 2;
+  optional bytes stringValue = 3;
+  optional double doubleValue = 4;
+
+  // composites. keep these in sync with the composites of the first-class PBs below.
+  optional group PointValue = 5 {
+    required double x = 6;
+    required double y = 7;
+  }
+
+  optional group UserValue = 8 {
+    // the order of these fields matters. email is first so that users are
+    // sorted by email, using simple string comparison.
+    required bytes email = 9;
+    required bytes auth_domain = 10;
+    optional string nickname = 11;
+    required int64 gaiaid = 18;
+  }
+
+  // NOTE: Because of indexing restrictions, we cannot use the
+  // stand-alone Reference and Path PBs defined below. If you amend
+  // this group, amend those PB definitions in this file as well.
+  optional group ReferenceValue = 12 {
+    required bytes app = 13;
+    repeated group PathElement = 14 {
+      required bytes type = 15;
+      // either name or id should be set
+      optional int64 id = 16;
+      optional bytes name = 17;
+    }
+  }
+}
+
+message Property {
+  // Meanings usually, but not always, have a functional relationship to
+  // storage type. Some don't, however: an ATOM_AUTHOR might be a User or a
+  // string, depending on what was stored.
+  enum Meaning {
+    // NOTE: using meaning to indicate blobs and text is a
+    // double-edged sword. if future semantic meanings are also text
+    // or blobs, they'll need to be special-cased in code.
+    BLOB = 14;              // raw binary data, of any length
+    TEXT = 15;              // a UTF-8 encoded string, of any length
+
+    // GDNamespace types:
+
+    // from the http://www.w3.org/2005/Atom namespace. see
+    // http://www.atomenabled.org/developers/syndication/
+    ATOM_CATEGORY = 1;      // a tag
+    ATOM_LINK = 2;          // a URI
+    ATOM_TITLE = 3;         // a human readable title
+    ATOM_CONTENT = 4;       // the main "content" of the entity
+    ATOM_SUMMARY = 5;       // a human readable short summary
+    ATOM_AUTHOR = 6;        // the author, a person
+
+    // from the http://schemas.google.com/g/2005 namespace. see
+    // http://code.google.com/apis/gdata/common-elements.html
+    //
+    // many elements are missing, notably gd:entryLink, gd:feedLink,
+    // gd:originalEvent, gd:recurrence*, gd:where, and gd:who. use
+    // REFERENCE, ATOM_LINK, GD_POSTALADDRESS, GD_GEOPT, and the
+    // Contact entity instead.
+    GD_WHEN = 7;            // timestamp, as int64 microseconds since the epoch
+    GD_EMAIL = 8;           // RFC 2822 email address
+    GEORSS_POINT = 9;       // "lat,long"
+    GD_IM = 10;             // IANA-style URI, e.g. xmpp:heaven@gmail.com
+                            //   or aim:goim?screenname=bl4ize
+    GD_PHONENUMBER = 11;    // human-readable phone number, any format
+    GD_POSTALADDRESS = 12;  // human-readable postal address. leading and
+                            //  trailing whitespace are stripped; embedded
+                            //  newlines and whitespace are significant.
+    GD_RATING = 13;         // an integer rating in [0, 100].
+  };
+
+  // Meanings are optional. If they are not provided, some amount of
+  // meaning may already be implied by the underlying storage type,
+  // such as User or Reference.
+  optional Meaning meaning = 1;
+  // If requested, raw URIs may be used to define semantic meaning for
+  // a property. This is less efficient, but allows anything to be
+  // expressed, and popular URIs may be converted to enum Meaning
+  // values later.
+  optional bytes meaning_uri = 2;
+
+  // The name of this property.
+  required bytes name = 3;
+
+  // The property value.
+  required PropertyValue value = 5;
+
+  // Whether this property is multiply valued or not. (If true, it may have
+  // multiple values now, or it may be *intended* to have multiple values
+  // eventually, even if it has just one now.)
+  //
+  // This is currently used as sugar for the native language datastore APIs,
+  // so they know whether to return a property value as a single value or a
+  // list.
+  optional bool multiple = 4;
+}
+
+// A path; also used as an Entity Group key.  This is an ordered list
+// of (type, id or name) tuples.  Each element should have either an id or a
+//  name, but not both.
+// Clarification: "so, yeah, it's a little tricky. that comment
+// correctly describes all Path PBs that refer to *complete* keys. for
+// new entities that haven't been inserted yet, and don't use name, the
+// datastore will allocate them an id when they're inserted. given that,
+// their keys are incomplete until they're inserted. so, when the runtime
+// sends them to the datastore in a PutRequest, they won't have an id
+// yet, so the last path element will only have type, not id or name."
+message Path {
+  repeated group Element = 1 {
+    required bytes type = 2;
+    // In paths that have been persisted, one and only one of the following
+    // should be set.
+    optional int64 id = 3;
+    optional bytes name = 4;
+  }
+}
+
+// An entity's primary key.
+message Reference {
+  required bytes app = 13;
+  required Path path = 14;
+}
+
+// A Google Accounts user.  Supports both regular and Google Apps For
+// Your Domain accounts.
+//
+// The User and Reference composite types also have their own PB messages, so
+// that we can use them in EntityProto.
+message User {
+  // nickname is currently unused.
+  required bytes email = 1;
+  required bytes auth_domain = 2;
+  optional string nickname = 3;
+  required int64 gaiaid = 4;
+}
+
+message EntityProto {
+  // This entity's primary key. Contains app name and path.
+  required Reference key = 13;
+
+  // This entity's group. By default, this is the top-level entity's path.
+  required Path entity_group = 16;
+
+  // The user who was logged in when this entity was created. This is
+  // currently unused.
+  optional User owner = 17;
+
+  // Kinds represent particular semantic kinds of entities. Entity
+  // kinds are akin to GDNamespace kinds, which are richer than a
+  // single property, and represent a set of properties. Essentially,
+  // this is the direct analogue of Meaning, but on a whole-entity
+  // level.
+  enum Kind {
+    // GDNamespace kinds:
+    GD_CONTACT = 1;   // a contact, such as a person, venue, organization
+    GD_EVENT = 2;     // a calendar event
+    GD_MESSAGE = 3;   // such as an email, a discussion group posting
+  }
+  optional Kind kind = 4;
+  // If requested, raw URIs may be used to define a semantic kind for
+  // an entity. This is less efficient, but allows anything to be
+  // expressed, and popular URIs may be converted to enum Kind values
+  // later.
+  optional bytes kind_uri = 5;
+
+  // Properties that should be indexed by value go in the property field.
+  // Properties that shouldn't, like blobs and long text fields (e.g. XML), go
+  // in raw_property.
+  repeated Property property = 14;
+  repeated Property raw_property = 15;
+}
+
+// Composite properties for composite indexes. These are populated by the
+// datastore implementation based on the entity's properties and the
+// application-defined custom indexes.
+message CompositeProperty {
+  // The ID of the associated composite index.
+  required int64 index_id = 1;
+
+  // The first value element is the ancestor, if the index calls for it, as a
+  // byte-encoded Path. The rest are the properties in the index, in order, as
+  // byte-encoded PropertyValues.
+  //
+  // A byte-encoding format is used. The descending byte-encoding
+  // format is used if the property should be sorted in descending order.
+  //
+  // As with PropertyValue, embedded Path and PropertyValue
+  // fields aren't used because we can't index nested PBs.
+  repeated bytes value = 2;
+}
+
+message Index {
+  // The type of entity being indexed.
+  required bytes entity_type = 1;
+
+  // If true, each of the entity's ancestors will be included.
+  //
+  // Each direct ancestor is indexed separately in its own composite property.
+  // For example, an entity with the path /Blog,1/Post,2/Comment,3 would have
+  // separate composite properties for /Blog,1 and /Blog,1/Post,2.
+  required bool ancestor = 5;
+
+  // A sequence of property names and directions.
+  repeated group Property = 2 {
+    required bytes name = 3;
+
+    enum Direction {
+      ASCENDING = 1;
+      DESCENDING = 2;
+    }
+    optional Direction direction = 4 [default = ASCENDING];
+  }
+}
+
+message CompositeIndex {
+  // The app that owns this composite index.
+  required bytes app_id = 1;
+
+  // The index's ID. Used in CompositeProperty.
+  required int64 id = 2;
+
+  // The index definition, including the entity type and properties.
+  required Index definition = 3;
+
+  // WRITE_ONLY indices have been created, but are not yet fully populated.
+  // Composite properties for them must be populated when entities are Put, but
+  // they may not yet be used to execute queries.
+  //
+  // READ_WRITE indices are fully populated. They may be used to execute
+  // queries. Like WRITE_ONLY, composite properties for them must be populated
+  // on Puts.
+  //
+  // DELETED indices are marked for eventual deletion from the
+  // CompositeIndices table. They should be disregarded for both queries and
+  // Puts.
+  //
+  // ERROR indices encountered an error while being built or deleted. They
+  // should be disregarded for both queries and Puts.
+  //
+  // The allowed state changes are:
+  //
+  // WRITE_ONLY => READ_WRITE
+  // WRITE_ONLY => DELETED
+  // WRITE_ONLY => ERROR
+  // READ_WRITE => DELETED
+  // ERROR => DELETED
+  // DELETED => ERROR
+  enum State {
+    WRITE_ONLY = 1;
+    READ_WRITE = 2;
+    DELETED = 3;
+    ERROR = 4;
+  }
+  required State state = 4;
+}

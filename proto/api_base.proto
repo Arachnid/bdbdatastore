@@ -1,0 +1,31 @@
+// Copyright 2006-2008 Google Inc. All Rights Reserved.
+
+syntax = "proto2";
+
+package appengine_base;
+
+option perl_message_package = "AppEngine::Service";
+option perl_file_package = "AppEngine::Service::Base";
+
+message StringProto {
+  required string value = 1;
+};
+
+message Integer32Proto {
+  required int32 value = 1;
+};
+
+message Integer64Proto {
+  required int64 value = 1;
+};
+
+message BoolProto {
+  required bool value = 1;
+};
+
+message DoubleProto {
+  required double value = 1;
+};
+
+message VoidProto {
+};
