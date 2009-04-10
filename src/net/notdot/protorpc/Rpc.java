@@ -223,7 +223,16 @@ public final class Rpc {
     
     public static enum ResponseType {
       OK(0, 0),
-      FAILED(1, 1),
+      RPC_FAILED(1, 1),
+      CALL_NOT_FOUND(2, 2),
+      ARGUMENT_ERROR(3, 3),
+      DEADLINE_EXCEEDED(4, 4),
+      CANCELLED(5, 5),
+      APPLICATION_ERROR(6, 6),
+      OTHER_ERROR(7, 7),
+      OVER_QUOTA(8, 8),
+      REQUEST_TOO_LARGE(9, 9),
+      CAPABILITY_DISABLED(10, 10),
       ;
       
       
@@ -232,7 +241,16 @@ public final class Rpc {
       public static ResponseType valueOf(int value) {
         switch (value) {
           case 0: return OK;
-          case 1: return FAILED;
+          case 1: return RPC_FAILED;
+          case 2: return CALL_NOT_FOUND;
+          case 3: return ARGUMENT_ERROR;
+          case 4: return DEADLINE_EXCEEDED;
+          case 5: return CANCELLED;
+          case 6: return APPLICATION_ERROR;
+          case 7: return OTHER_ERROR;
+          case 8: return OVER_QUOTA;
+          case 9: return REQUEST_TOO_LARGE;
+          case 10: return CAPABILITY_DISABLED;
           default: return null;
         }
       }
@@ -251,7 +269,7 @@ public final class Rpc {
       }
       
       private static final ResponseType[] VALUES = {
-        OK, FAILED, 
+        OK, RPC_FAILED, CALL_NOT_FOUND, ARGUMENT_ERROR, DEADLINE_EXCEEDED, CANCELLED, APPLICATION_ERROR, OTHER_ERROR, OVER_QUOTA, REQUEST_TOO_LARGE, CAPABILITY_DISABLED, 
       };
       public static ResponseType valueOf(
           com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
@@ -285,11 +303,17 @@ public final class Rpc {
     public boolean hasBody() { return hasBody; }
     public com.google.protobuf.ByteString getBody() { return body_; }
     
-    // optional string error = 3;
-    private boolean hasError;
-    private java.lang.String error_ = "";
-    public boolean hasError() { return hasError; }
-    public java.lang.String getError() { return error_; }
+    // optional string error_detail = 3;
+    private boolean hasErrorDetail;
+    private java.lang.String errorDetail_ = "";
+    public boolean hasErrorDetail() { return hasErrorDetail; }
+    public java.lang.String getErrorDetail() { return errorDetail_; }
+    
+    // optional int32 application_error = 4;
+    private boolean hasApplicationError;
+    private int applicationError_ = 0;
+    public boolean hasApplicationError() { return hasApplicationError; }
+    public int getApplicationError() { return applicationError_; }
     
     public static net.notdot.protorpc.Rpc.Response parseFrom(
         com.google.protobuf.ByteString data)
@@ -437,21 +461,39 @@ public final class Rpc {
         return this;
       }
       
-      // optional string error = 3;
-      public boolean hasError() {
-        return result.hasError();
+      // optional string error_detail = 3;
+      public boolean hasErrorDetail() {
+        return result.hasErrorDetail();
       }
-      public java.lang.String getError() {
-        return result.getError();
+      public java.lang.String getErrorDetail() {
+        return result.getErrorDetail();
       }
-      public Builder setError(java.lang.String value) {
-        result.hasError = true;
-        result.error_ = value;
+      public Builder setErrorDetail(java.lang.String value) {
+        result.hasErrorDetail = true;
+        result.errorDetail_ = value;
         return this;
       }
-      public Builder clearError() {
-        result.hasError = false;
-        result.error_ = "";
+      public Builder clearErrorDetail() {
+        result.hasErrorDetail = false;
+        result.errorDetail_ = "";
+        return this;
+      }
+      
+      // optional int32 application_error = 4;
+      public boolean hasApplicationError() {
+        return result.hasApplicationError();
+      }
+      public int getApplicationError() {
+        return result.getApplicationError();
+      }
+      public Builder setApplicationError(int value) {
+        result.hasApplicationError = true;
+        result.applicationError_ = value;
+        return this;
+      }
+      public Builder clearApplicationError() {
+        result.hasApplicationError = false;
+        result.applicationError_ = 0;
         return this;
       }
     }
@@ -481,11 +523,16 @@ public final class Rpc {
   static {
     java.lang.String descriptorData =
       "\n\trpc.proto\022\023net.notdot.protorpc\"\'\n\007Requ" +
-      "est\022\016\n\006method\030\001 \002(\t\022\014\n\004body\030\002 \002(\014\"\213\001\n\010Re" +
+      "est\022\016\n\006method\030\001 \002(\t\022\014\n\004body\030\002 \002(\014\"\350\002\n\010Re" +
       "sponse\022>\n\006status\030\001 \002(\0162*.net.notdot.prot" +
       "orpc.Response.ResponseType:\002OK\022\014\n\004body\030\002" +
-      " \001(\014\022\r\n\005error\030\003 \001(\t\"\"\n\014ResponseType\022\006\n\002O" +
-      "K\020\000\022\n\n\006FAILED\020\001";
+      " \001(\014\022\024\n\014error_detail\030\003 \001(\t\022\031\n\021applicatio" +
+      "n_error\030\004 \001(\005\"\334\001\n\014ResponseType\022\006\n\002OK\020\000\022\016" +
+      "\n\nRPC_FAILED\020\001\022\022\n\016CALL_NOT_FOUND\020\002\022\022\n\016AR" +
+      "GUMENT_ERROR\020\003\022\025\n\021DEADLINE_EXCEEDED\020\004\022\r\n" +
+      "\tCANCELLED\020\005\022\025\n\021APPLICATION_ERROR\020\006\022\017\n\013O" +
+      "THER_ERROR\020\007\022\016\n\nOVER_QUOTA\020\010\022\025\n\021REQUEST_" +
+      "TOO_LARGE\020\t\022\027\n\023CAPABILITY_DISABLED\020\n";
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
@@ -504,7 +551,7 @@ public final class Rpc {
           internal_static_net_notdot_protorpc_Response_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_net_notdot_protorpc_Response_descriptor,
-              new java.lang.String[] { "Status", "Body", "Error", },
+              new java.lang.String[] { "Status", "Body", "ErrorDetail", "ApplicationError", },
               net.notdot.protorpc.Rpc.Response.class,
               net.notdot.protorpc.Rpc.Response.Builder.class);
           return null;

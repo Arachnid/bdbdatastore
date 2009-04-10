@@ -2,10 +2,7 @@
 
 syntax = "proto2";
 
-package appengine_base;
-
-option perl_message_package = "AppEngine::Service";
-option perl_file_package = "AppEngine::Service::Base";
+package com.google.appengine.base;
 
 message StringProto {
   required string value = 1;

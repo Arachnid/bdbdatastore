@@ -8,10 +8,20 @@ message Request {
 message Response {
   enum ResponseType {
     OK = 0;
-    FAILED = 1;
+    RPC_FAILED = 1;
+    CALL_NOT_FOUND = 2;
+    ARGUMENT_ERROR = 3;
+    DEADLINE_EXCEEDED = 4;
+    CANCELLED = 5;
+    APPLICATION_ERROR = 6;
+    OTHER_ERROR = 7;
+    OVER_QUOTA = 8;
+    REQUEST_TOO_LARGE = 9;
+    CAPABILITY_DISABLED = 10;
   }
   
   required ResponseType status = 1 [default=OK];
   optional bytes body = 2;
-  optional string error = 3;
+  optional string error_detail = 3;
+  optional int32 application_error = 4;
 }

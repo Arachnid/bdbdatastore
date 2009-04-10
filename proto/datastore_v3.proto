@@ -7,10 +7,7 @@ syntax = "proto2";
 import "entity.proto";
 import "api_base.proto";
 
-package appengine_datastore_v3;
-
-option perl_message_package = "AppEngine::Service::Datastore";
-option perl_file_package = "AppEngine::Service::Datastore";
+package com.google.appengine.datastore_v3;
 
 //
 // A transaction handle.
@@ -32,7 +29,7 @@ message Query {
   // entities descended from that ancestor by path, including the ancestor
   // itself, are returned. either or both must be provided.
   optional bytes kind = 3;
-  optional appengine_entity.Reference ancestor = 17;
+  optional com.google.appengine.entity.Reference ancestor = 17;
 
   // filter based on property values. these AND, not OR, together.
   //
@@ -54,7 +51,7 @@ message Query {
     }
 
     required int32 op = 6;
-    repeated appengine_entity.Property property = 14;
+    repeated com.google.appengine.entity.Property property = 14;
   }
 
   // currently not implemented. eventually, when provided, this will be used
@@ -82,7 +79,7 @@ message Query {
   optional int32 limit = 16;
 
   // the composite indexes, if any, that are available to the query planner
-  repeated appengine_entity.CompositeIndex composite_index = 19;
+  repeated com.google.appengine.entity.CompositeIndex composite_index = 19;
 
   // if true, the datastore will only run this query if there's an index or
   // set of indices that perfectly match it. if not, it will return an error.
@@ -97,7 +94,7 @@ message QueryExplanation {
   // Multiple property indexes may be used, even in conjunction with a native
   // ancestor, in the case of merge join queries. In other cases, only a
   // single index is used.
-  repeated appengine_entity.Index native_index = 2;
+  repeated com.google.appengine.entity.Index native_index = 2;
 
   // The native offset, if any.
   optional int32 native_offset = 3;
@@ -126,7 +123,7 @@ message Error {
 }
 
 message GetRequest {
-  repeated appengine_entity.Reference key = 1;
+  repeated com.google.appengine.entity.Reference key = 1;
   optional Transaction transaction = 2;
 }
 
@@ -135,22 +132,22 @@ message GetResponse {
   // entity field will be set for keys that were found, unset for keys that
   // weren't found.
   repeated group Entity = 1 {
-    optional appengine_entity.EntityProto entity = 2;
+    optional com.google.appengine.entity.EntityProto entity = 2;
   }
 }
 
 message PutRequest {
-  repeated appengine_entity.EntityProto entity = 1;
+  repeated com.google.appengine.entity.EntityProto entity = 1;
   optional Transaction transaction = 2;
-  repeated appengine_entity.CompositeIndex composite_index = 3;
+  repeated com.google.appengine.entity.CompositeIndex composite_index = 3;
 }
 
 message PutResponse {
-  repeated appengine_entity.Reference key = 1;
+  repeated com.google.appengine.entity.Reference key = 1;
 }
 
 message DeleteRequest {
-  repeated appengine_entity.Reference key = 6;
+  repeated com.google.appengine.entity.Reference key = 6;
   optional Transaction transaction = 5;
 }
 
@@ -162,18 +159,18 @@ message NextRequest {
 message QueryResult {
   // cursor is set in RunQuery() responses, but not in Next() responses
   optional Cursor cursor = 1;
-  repeated appengine_entity.EntityProto result = 2;
+  repeated com.google.appengine.entity.EntityProto result = 2;
   required bool more_results = 3;
 }
 
 message Schema {
   // includes one entity per kind found in the datastore. each one includes
   // all property names and types found in entities of that kind.
-  repeated appengine_entity.EntityProto kind = 1;
+  repeated com.google.appengine.entity.EntityProto kind = 1;
 }
 
 message CompositeIndices {
-  repeated appengine_entity.CompositeIndex index = 1;
+  repeated com.google.appengine.entity.CompositeIndex index = 1;
 }
 
 //
@@ -208,7 +205,7 @@ service DatastoreService {
   // If the request includes a transaction, then the entities are deleted in
   // the context of that transaction, and the writes will happen when the
   // transaction is committed.
-  rpc Delete(DeleteRequest) returns (appengine_base.VoidProto) {};
+  rpc Delete(DeleteRequest) returns (com.google.appengine.base.VoidProto) {};
 
   // run a query
   rpc RunQuery(Query) returns (QueryResult) {};
@@ -219,39 +216,39 @@ service DatastoreService {
   // get a query's histogram (not really, just a result count). this is the
   // total number of result for the query, *not* the number of results left
   // in the query.
-  rpc Count(Query) returns (appengine_base.Integer64Proto) {};
+  rpc Count(Query) returns (com.google.appengine.base.Integer64Proto) {};
 
   // get an explanation of the query plan that would be executed by RunQuery
   rpc Explain(Query) returns (QueryExplanation) {};
 
   // deletes a query cursor and flushes any associated state
-  rpc DeleteCursor(Cursor) returns (appengine_base.VoidProto) {};
+  rpc DeleteCursor(Cursor) returns (com.google.appengine.base.VoidProto) {};
 
   // begin, commit, and rollback a transaction
-  rpc BeginTransaction(appengine_base.VoidProto) returns (Transaction) {};
-  rpc Commit(Transaction) returns (appengine_base.VoidProto) {};
-  rpc Rollback(Transaction) returns (appengine_base.VoidProto) {};
+  rpc BeginTransaction(com.google.appengine.base.VoidProto) returns (Transaction) {};
+  rpc Commit(Transaction) returns (com.google.appengine.base.VoidProto) {};
+  rpc Rollback(Transaction) returns (com.google.appengine.base.VoidProto) {};
 
   // makes an educated guess at an app's schema based on the entities in its
   // datastore. the request StringProto should contain the app id.
-  rpc GetSchema(appengine_base.StringProto) returns (Schema) {};
+  rpc GetSchema(com.google.appengine.base.StringProto) returns (Schema) {};
 
   // create a new composite index. the request index's id should be 0. returns
   // the id assigned to the newly created index.
-  rpc CreateIndex(appengine_entity.CompositeIndex)
-      returns (appengine_base.Integer64Proto) {};
+  rpc CreateIndex(com.google.appengine.entity.CompositeIndex)
+      returns (com.google.appengine.base.Integer64Proto) {};
 
   // update a composite index's state. only the state field will be changed.
   // the index id field is ignored.
   //
   // this call is idempotent. if the index already has the desired state,
   // UpdateIndex is a noop.
-  rpc UpdateIndex(appengine_entity.CompositeIndex)
-      returns (appengine_base.VoidProto) {};
+  rpc UpdateIndex(com.google.appengine.entity.CompositeIndex)
+      returns (com.google.appengine.base.VoidProto) {};
 
   // returns all composite indices defined for a given app. the request
   // StringProto should contain the app id.
-  rpc GetIndices(appengine_base.StringProto) returns (CompositeIndices) {};
+  rpc GetIndices(com.google.appengine.base.StringProto) returns (CompositeIndices) {};
 
   // deletes a composite index definition. only the app_id and definition
   // fields of the CompositeIndex request PB are used.
@@ -261,6 +258,6 @@ service DatastoreService {
   //
   // note that this deletes the index definition, but it does *not* delete the
   // index's rows in the EntitiesByCompositeProperty index.
-  rpc DeleteIndex(appengine_entity.CompositeIndex)
-      returns (appengine_base.VoidProto) {};
+  rpc DeleteIndex(com.google.appengine.entity.CompositeIndex)
+      returns (com.google.appengine.base.VoidProto) {};
 }

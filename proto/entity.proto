@@ -2,10 +2,7 @@
 
 syntax = "proto2";
 
-package appengine_entity;
-
-option perl_message_package = "AppEngine::Service::Entity";
-option perl_file_package = "AppEngine::Service::Entity";
+package com.google.appengine.entity;
 
 // The PropertyValue PB represents a property value.
 // One and only one of the value fields should be set. This is
@@ -135,7 +132,7 @@ message Path {
 
 // An entity's primary key.
 message Reference {
-  required bytes app = 13;
+  required string app = 13;
   required Path path = 14;
 }
 

@@ -5,6 +5,7 @@ import net.notdot.protorpc.Rpc.Response;
 import org.apache.mina.core.service.IoHandlerAdapter;
 import org.apache.mina.core.session.IoSession;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.Service;
@@ -26,7 +27,6 @@ public class ProtoRpcHandler extends IoHandlerAdapter {
 					.setBody(arg0.toByteString()).build();
 				session.write(response);
 				called = true;
-				System.out.println("Response");
 			}
 		}
 
@@ -45,8 +45,8 @@ public class ProtoRpcHandler extends IoHandlerAdapter {
 	public void exceptionCaught(IoSession session, Throwable cause)
 			throws Exception {
 		Rpc.Response response = Rpc.Response.newBuilder()
-		.setStatus(Rpc.Response.ResponseType.FAILED)
-		.setError(cause.toString()).build();
+		.setStatus(Rpc.Response.ResponseType.RPC_FAILED)
+		.setErrorDetail(cause.toString()).build();
 		session.write(response);
 		System.out.println("Exception");
 	}
@@ -54,18 +54,36 @@ public class ProtoRpcHandler extends IoHandlerAdapter {
 	@Override
 	public void messageReceived(IoSession session, Object message)
 			throws Exception {
-		RpcController controller = new RpcController(session);
 		Rpc.Request request = (Rpc.Request) message;
+
 		MethodDescriptor method = service.getDescriptorForType().findMethodByName(request.getMethod());
-		Message request_data = service.getRequestPrototype(method).newBuilderForType().mergeFrom(request.getBody()).build();
+		if(method == null) {
+			session.write(Rpc.Response.newBuilder().setStatus(Rpc.Response.ResponseType.CALL_NOT_FOUND).build());
+			return;
+		}
+
+		Message request_data;
+		try {
+			request_data = service.getRequestPrototype(method).newBuilderForType().mergeFrom(request.getBody()).build();
+		} catch(InvalidProtocolBufferException ex) {
+			session.write(Rpc.Response.newBuilder().setStatus(Rpc.Response.ResponseType.ARGUMENT_ERROR).build());
+			return;
+		}
+
 		ProtoRpcCallback callback = new ProtoRpcCallback(session);
+		ProtoRpcController controller = new ProtoRpcController(session);
 		service.callMethod(method, controller, request_data, callback);
 		if(!callback.isCalled()) {
-			Rpc.Response response = Rpc.Response.newBuilder()
-					.setStatus(Rpc.Response.ResponseType.FAILED)
-					.setError(controller.errorText()).build();
-			System.out.println("Failed");
-			session.write(response);
+			if(controller.failed()) {
+				session.write(Rpc.Response.newBuilder()
+						.setStatus(Rpc.Response.ResponseType.APPLICATION_ERROR)
+						.setErrorDetail(controller.errorText())
+						.setApplicationError(controller.getApplicationError()).build());
+			} else {
+				session.write(Rpc.Response.newBuilder()
+						.setStatus(Rpc.Response.ResponseType.RPC_FAILED)
+						.setErrorDetail("RPC handler failed to issue a response").build());
+			}
 		}
 	}
 }
