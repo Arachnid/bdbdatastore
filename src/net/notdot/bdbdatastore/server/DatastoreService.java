@@ -136,7 +136,7 @@ public class DatastoreService extends
 		try {
 			Transaction tx = this.getTransaction(request.getTransaction(), ds);
 			for(Reference ref : request.getKeyList()) {
-				if(ref.getApp() != app_id)
+				if(!ref.getApp().equals(app_id))
 					throw new RpcFailedError("All entities must have the same app_id",
 							DatastoreV3.Error.ErrorCode.BAD_REQUEST.getNumber());
 				ds.delete(ref, tx);
@@ -189,7 +189,7 @@ public class DatastoreService extends
 			Transaction tx = this.getTransaction(request.getTransaction(), ds);
 			
 			for(Reference ref : request.getKeyList()) {
-				if(ref.getApp() != app_id) {
+				if(!ref.getApp().equals(app_id)) {
 					throw new RpcFailedError("All entities must have the same app_id",
 							DatastoreV3.Error.ErrorCode.BAD_REQUEST.getNumber());
 				}
@@ -246,7 +246,7 @@ public class DatastoreService extends
 		try {
 			Transaction tx = this.getTransaction(request.getTransaction(), ds);
 			for(EntityProto ent : request.getEntityList()) {
-				if(ent.getKey().getApp() != app_id) {
+				if(!ent.getKey().getApp().equals(app_id)) {
 					throw new RpcFailedError("All entities must have the same app_id",
 							DatastoreV3.Error.ErrorCode.BAD_REQUEST.getNumber());
 				}

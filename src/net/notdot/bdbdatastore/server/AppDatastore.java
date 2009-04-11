@@ -19,6 +19,7 @@ import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.EnvironmentLockedException;
 import com.sleepycat.je.OperationStatus;
+import com.sleepycat.je.SecondaryDatabase;
 import com.sleepycat.je.Sequence;
 import com.sleepycat.je.SequenceConfig;
 import com.sleepycat.je.Transaction;
@@ -28,8 +29,16 @@ public class AppDatastore {
 	final Logger logger = LoggerFactory.getLogger(AppDatastore.class);
 	
 	protected String app_id;
+	// The database environment, containing all the tables and indexes.
 	protected Environment env;
+	// The primary entities table. The primary key is the encoded Reference protocol buffer.
+	// References are sorted first by kind, then by path, so we can also use this to satisfy
+	// kind and ancestor queries.
 	protected Database entities;
+	// We define a single built-in index for satisfying equality queries on fields.
+	protected SecondaryDatabase entities_by_property;
+	
+	// Cached sequences
 	protected Map<Reference, Sequence> sequences = new HashMap<Reference, Sequence>();
 	
 	public AppDatastore(String basedir, String app_id)
@@ -48,12 +57,15 @@ public class AppDatastore {
 		DatabaseConfig dbconfig = new DatabaseConfig();
 		dbconfig.setAllowCreate(true);
 		dbconfig.setTransactional(true);
+		dbconfig.setBtreeComparator(SerializedReferenceComparator.class);
 		entities = env.openDatabase(null, "entities", dbconfig);
 		
 		env.openDatabase(null, "blahtest", dbconfig);
 	}
 	
 	public void close() throws DatabaseException {
+		for(Sequence seq : this.sequences.values())
+			seq.close();
 		entities.close();
 		env.close();
 	}
