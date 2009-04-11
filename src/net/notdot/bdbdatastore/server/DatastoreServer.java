@@ -21,7 +21,7 @@ import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.EnvironmentLockedException;
 
 public class DatastoreServer {
-	final Logger logger = LoggerFactory.getLogger(DatastoreServer.class);
+	static final Logger logger = LoggerFactory.getLogger(DatastoreServer.class);
 
 	private static Datastore datastore;
 	private static ChannelFactory factory;
@@ -66,5 +66,6 @@ public class DatastoreServer {
 		DatastoreServiceFactory ds_factory = new DatastoreServiceFactory(datastore);
 		bootstrap.setPipelineFactory(new ProtoRpcPipelineFactory(ds_factory, openChannels, max_pb_size));
 		bootstrap.bind(new InetSocketAddress(properties.getInt("datastore.port", 9123)));
+		logger.info("Server started.");
 	}
 }
