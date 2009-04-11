@@ -3,8 +3,6 @@ package net.notdot.bdbdatastore.server;
 import java.util.HashMap;
 import java.util.Map;
 
-import net.notdot.protorpc.ProtoRpcController;
-import net.notdot.protorpc.Rpc;
 import net.notdot.protorpc.RpcFailedError;
 
 import com.google.appengine.base.ApiBase.Integer64Proto;

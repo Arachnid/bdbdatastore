@@ -1,11 +1,8 @@
 package net.notdot.protorpc;
 
-import org.jboss.netty.channel.Channel;
-
 import com.google.protobuf.RpcCallback;
 
 public class ProtoRpcController implements com.google.protobuf.RpcController {
-    protected Channel channel = null;
 	protected String error = null;
 	protected int application_error = 0;
 	
@@ -17,8 +14,7 @@ public class ProtoRpcController implements com.google.protobuf.RpcController {
 		this.application_error = application_error;
 	}
 
-	protected ProtoRpcController(Channel ch) {
-		this.channel = ch;
+	public ProtoRpcController() {
 	}
 	
 	public String errorText() {

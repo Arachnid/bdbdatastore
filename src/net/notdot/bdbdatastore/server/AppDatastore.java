@@ -32,7 +32,8 @@ public class AppDatastore {
 	protected Database entities;
 	protected Map<Reference, Sequence> sequences = new HashMap<Reference, Sequence>();
 	
-	public AppDatastore(String basedir, String app_id) throws EnvironmentLockedException, DatabaseException {
+	public AppDatastore(String basedir, String app_id)
+			throws EnvironmentLockedException, DatabaseException {
 		this.app_id = app_id;
 		
 		File datastore_dir = new File(basedir, app_id);
@@ -45,8 +46,8 @@ public class AppDatastore {
 		env = new Environment(datastore_dir, envconfig);
 		
 		DatabaseConfig dbconfig = new DatabaseConfig();
-		dbconfig.setTransactional(true);
 		dbconfig.setAllowCreate(true);
+		dbconfig.setTransactional(true);
 		entities = env.openDatabase(null, "entities", dbconfig);
 		
 		env.openDatabase(null, "blahtest", dbconfig);

@@ -78,7 +78,7 @@ public class ProtoRpcHandler extends SimpleChannelHandler {
 		}
 
 		ProtoRpcCallback callback = new ProtoRpcCallback(ch);
-		ProtoRpcController controller = new ProtoRpcController(ch);
+		ProtoRpcController controller = new ProtoRpcController();
 		try {
 			service.callMethod(method, controller, request_data, callback);
 		} catch(RpcFailedError ex) {
