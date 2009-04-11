@@ -11,6 +11,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.google.appengine.base.ApiBase;
 import com.google.appengine.base.ApiBase.VoidProto;
 import com.google.appengine.datastore_v3.DatastoreV3;
 import com.google.appengine.entity.Entity;
@@ -105,12 +106,84 @@ public class DatastoreServiceTest {
 
 	@Test
 	public void testCommit() {
-		fail("Not yet implemented");
+		RpcController controller = new ProtoRpcController();
+
+		// Create a transaction
+		TestRpcCallback<DatastoreV3.Transaction> tx_done = new TestRpcCallback<DatastoreV3.Transaction>();
+		service.beginTransaction(controller, ApiBase.VoidProto.getDefaultInstance(), tx_done);
+		assertTrue(tx_done.isCalled());
+		DatastoreV3.Transaction tx = tx_done.getValue();
+		
+		// Create an entity
+		TestRpcCallback<DatastoreV3.PutResponse> put_done = new TestRpcCallback<DatastoreV3.PutResponse>();
+		DatastoreV3.PutRequest put_request = DatastoreV3.PutRequest.newBuilder().addEntity(testent).setTransaction(tx).build();
+		service.put(controller, put_request, put_done);
+		assertTrue(put_done.isCalled());
+
+		// Commit the transaction
+		TestRpcCallback<ApiBase.VoidProto> void_done = new TestRpcCallback<ApiBase.VoidProto>();
+		service.commit(controller, tx, void_done);
+		assertTrue(void_done.isCalled());
+		
+		// Check the entity is there
+		controller = new ProtoRpcController();
+		TestRpcCallback<DatastoreV3.GetResponse> get_done = new TestRpcCallback<DatastoreV3.GetResponse>();
+		DatastoreV3.GetRequest get_request = DatastoreV3.GetRequest.newBuilder().addKey(testkey).build();
+		service.get(controller, get_request, get_done);
+		assertTrue(get_done.isCalled());
+		assertEquals(get_done.getValue().getEntity(0).getEntity(), testent);
+		
+		// Ensure the transaction is gone
+		assertFalse(service.transactions.containsKey(tx));
+	}
+	
+	@Test
+	public void testCommitEmpty() {
+		RpcController controller = new ProtoRpcController();
+
+		// Create a transaction
+		TestRpcCallback<DatastoreV3.Transaction> tx_done = new TestRpcCallback<DatastoreV3.Transaction>();
+		service.beginTransaction(controller, ApiBase.VoidProto.getDefaultInstance(), tx_done);
+		assertTrue(tx_done.isCalled());
+		DatastoreV3.Transaction tx = tx_done.getValue();
+		
+		// Commit the transaction
+		TestRpcCallback<ApiBase.VoidProto> void_done = new TestRpcCallback<ApiBase.VoidProto>();
+		service.commit(controller, tx, void_done);
+		assertTrue(void_done.isCalled());
 	}
 
 	@Test
 	public void testDelete() {
-		fail("Not yet implemented");
+		RpcController controller = new ProtoRpcController();
+		
+		// Create an entity
+		TestRpcCallback<DatastoreV3.PutResponse> put_done = new TestRpcCallback<DatastoreV3.PutResponse>();
+		DatastoreV3.PutRequest put_request = DatastoreV3.PutRequest.newBuilder().addEntity(testent).build();
+		service.put(controller, put_request, put_done);
+		assertTrue(put_done.isCalled());
+		
+		// Check it's there
+		controller = new ProtoRpcController();
+		TestRpcCallback<DatastoreV3.GetResponse> get_done = new TestRpcCallback<DatastoreV3.GetResponse>();
+		DatastoreV3.GetRequest get_request = DatastoreV3.GetRequest.newBuilder().addKey(testkey).build();
+		service.get(controller, get_request, get_done);
+		assertTrue(get_done.isCalled());
+		assertEquals(get_done.getValue().getEntity(0).getEntity(), testent);
+		
+		// Delete it
+		controller = new ProtoRpcController();
+		TestRpcCallback<ApiBase.VoidProto> del_done = new TestRpcCallback<ApiBase.VoidProto>();
+		DatastoreV3.DeleteRequest del_request = DatastoreV3.DeleteRequest.newBuilder().addKey(testkey).build();
+		service.delete(controller, del_request, del_done);
+		assertTrue(del_done.isCalled());
+		
+		// Check it's not there
+		controller = new ProtoRpcController();
+		get_done = new TestRpcCallback<DatastoreV3.GetResponse>();
+		service.get(controller, get_request, get_done);
+		assertTrue(get_done.isCalled());		
+		assertFalse(get_done.getValue().getEntity(0).hasEntity());
 	}
 
 	@Test
@@ -158,6 +231,50 @@ public class DatastoreServiceTest {
 
 	@Test
 	public void testRollback() {
-		fail("Not yet implemented");
+		RpcController controller = new ProtoRpcController();
+
+		// Create a transaction
+		TestRpcCallback<DatastoreV3.Transaction> tx_done = new TestRpcCallback<DatastoreV3.Transaction>();
+		service.beginTransaction(controller, ApiBase.VoidProto.getDefaultInstance(), tx_done);
+		assertTrue(tx_done.isCalled());
+		DatastoreV3.Transaction tx = tx_done.getValue();
+		
+		// Create an entity
+		TestRpcCallback<DatastoreV3.PutResponse> put_done = new TestRpcCallback<DatastoreV3.PutResponse>();
+		DatastoreV3.PutRequest put_request = DatastoreV3.PutRequest.newBuilder().addEntity(testent).setTransaction(tx).build();
+		service.put(controller, put_request, put_done);
+		assertTrue(put_done.isCalled());
+
+		// Rollback the transaction
+		TestRpcCallback<ApiBase.VoidProto> void_done = new TestRpcCallback<ApiBase.VoidProto>();
+		service.rollback(controller, tx, void_done);
+		assertTrue(void_done.isCalled());
+		
+		// Check the entity is not there
+		controller = new ProtoRpcController();
+		TestRpcCallback<DatastoreV3.GetResponse> get_done = new TestRpcCallback<DatastoreV3.GetResponse>();
+		DatastoreV3.GetRequest get_request = DatastoreV3.GetRequest.newBuilder().addKey(testkey).build();
+		service.get(controller, get_request, get_done);
+		assertTrue(get_done.isCalled());
+		assertFalse(get_done.getValue().getEntity(0).hasEntity());
+		
+		// Ensure the transaction is gone
+		assertFalse(service.transactions.containsKey(tx));
+	}
+
+	@Test
+	public void testRollbackEmpty() {
+		RpcController controller = new ProtoRpcController();
+
+		// Create a transaction
+		TestRpcCallback<DatastoreV3.Transaction> tx_done = new TestRpcCallback<DatastoreV3.Transaction>();
+		service.beginTransaction(controller, ApiBase.VoidProto.getDefaultInstance(), tx_done);
+		assertTrue(tx_done.isCalled());
+		DatastoreV3.Transaction tx = tx_done.getValue();
+		
+		// Roll back the transaction
+		TestRpcCallback<ApiBase.VoidProto> void_done = new TestRpcCallback<ApiBase.VoidProto>();
+		service.rollback(controller, tx, void_done);
+		assertTrue(void_done.isCalled());
 	}
 }

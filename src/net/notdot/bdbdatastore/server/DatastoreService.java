@@ -63,9 +63,11 @@ public class DatastoreService extends
 			synchronized(transactions) {
 				ret = transactions.get(handle);
 				if(ret == null) {
-					if(!transactions.containsKey(handle) || ds == null)
+					if(!transactions.containsKey(handle))
 						throw new RpcFailedError("Invalid transaction handle",
 								DatastoreV3.Error.ErrorCode.BAD_REQUEST.getNumber());
+					if(ds == null)
+						return null;
 					try {
 						ret = ds.newTransaction();
 					} catch(DatabaseException ex) {
@@ -95,8 +97,10 @@ public class DatastoreService extends
 			RpcCallback<VoidProto> done) {
 		try {
 			Transaction tx = this.getTransaction(request, null);
-			tx.commit();
+			if(tx != null)
+				tx.commit();
 			done.run(VoidProto.getDefaultInstance());
+			this.transactions.remove(request);
 		} catch(DatabaseException ex) {
 			throw new RpcFailedError(ex, DatastoreV3.Error.ErrorCode.INTERNAL_ERROR.getNumber());
 		}
@@ -137,6 +141,7 @@ public class DatastoreService extends
 							DatastoreV3.Error.ErrorCode.BAD_REQUEST.getNumber());
 				ds.delete(ref, tx);
 			}
+			done.run(VoidProto.getDefaultInstance());
 		} catch(DeadlockException ex) {
 			throw new RpcFailedError("Operation was terminated to resolve a deadlock.",
 					DatastoreV3.Error.ErrorCode.CONCURRENT_TRANSACTION.getNumber());
@@ -261,8 +266,10 @@ public class DatastoreService extends
 			RpcCallback<VoidProto> done) {
 		try {
 			Transaction tx = this.getTransaction(request, null);
-			tx.abort();
+			if(tx != null)
+				tx.abort();
 			done.run(VoidProto.getDefaultInstance());
+			this.transactions.remove(request);
 		} catch(DatabaseException ex) {
 			throw new RpcFailedError(ex.toString(),
 					DatastoreV3.Error.ErrorCode.INTERNAL_ERROR.getNumber());
