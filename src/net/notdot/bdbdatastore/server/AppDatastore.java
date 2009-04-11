@@ -76,7 +76,7 @@ public class AppDatastore {
 				if(seq == null) {
 					SequenceConfig conf = new SequenceConfig();
 					conf.setAllowCreate(true);
-					conf.setCacheSize(20);
+					conf.setCacheSize(DatastoreServer.properties.getInt("datastore.sequence.cache_size", 20));
 					conf.setInitialValue(1);
 					seq = entities.openSequence(null, new DatabaseEntry(ref.toByteArray()), conf);
 					this.sequences.put(ref, seq);

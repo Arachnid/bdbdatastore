@@ -1,5 +1,7 @@
 package net.notdot.bdbdatastore.server;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
@@ -24,8 +26,8 @@ public class DatastoreServer {
 	private static Datastore datastore;
 	private static ChannelFactory factory;
 	private static ChannelGroup openChannels = new DefaultChannelGroup("DatastoreServer");
-	private static final int PORT = 9123;
-	private static final String PATH = "datastore";
+	
+	public static TypedProperties properties = new TypedProperties();
 
 	/**
 	 * @param args
@@ -34,7 +36,15 @@ public class DatastoreServer {
 	 * @throws EnvironmentLockedException 
 	 */
 	public static void main(String[] args) throws IOException, EnvironmentLockedException, DatabaseException {
-		datastore = new Datastore(PATH);
+		if(args.length != 2) {
+			System.out.println(String.format("Usage: %s datastoredir", args[0]));
+			return;
+		}
+		
+		String datastore_path = args[1];
+		properties.load(new FileInputStream(new File(datastore_path, "datastore.properties")));
+		
+		datastore = new Datastore(datastore_path);
 
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
@@ -42,15 +52,17 @@ public class DatastoreServer {
 				ChannelGroupFuture future = openChannels.close();
 				future.awaitUninterruptibly();
 				factory.releaseExternalResources();
-				System.out.println("Closing!");
 			}
 		});
+		
+		int max_pb_size = properties.getInt("datastore.max_pb_size", 1048576);
 		
 		factory = new NioServerSocketChannelFactory(
 				Executors.newCachedThreadPool(),
 				Executors.newCachedThreadPool());
 		ServerBootstrap bootstrap = new ServerBootstrap(factory);
-		bootstrap.setPipelineFactory(new ProtoRpcPipelineFactory(new DatastoreServiceFactory(datastore), openChannels));
-		bootstrap.bind(new InetSocketAddress(PORT));
+		DatastoreServiceFactory ds_factory = new DatastoreServiceFactory(datastore);
+		bootstrap.setPipelineFactory(new ProtoRpcPipelineFactory(ds_factory, openChannels, max_pb_size));
+		bootstrap.bind(new InetSocketAddress(properties.getInt("datastore.port", 9123)));
 	}
 }
