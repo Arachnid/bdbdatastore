@@ -45,6 +45,7 @@ public class AppDatastore {
 		env = new Environment(datastore_dir, envconfig);
 		
 		DatabaseConfig dbconfig = new DatabaseConfig();
+		dbconfig.setTransactional(true);
 		dbconfig.setAllowCreate(true);
 		entities = env.openDatabase(null, "entities", dbconfig);
 		

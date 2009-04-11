@@ -56,7 +56,7 @@ public class DatastoreService extends
 	}
 	
 	protected Transaction getTransaction(DatastoreV3.Transaction handle, AppDatastore ds) {
-		if(handle == null)
+		if(handle == null || !handle.hasHandle())
 			// No handle - not in a transaction
 			return null;
 		Transaction ret = transactions.get(handle);
@@ -64,11 +64,11 @@ public class DatastoreService extends
 			synchronized(transactions) {
 				ret = transactions.get(handle);
 				if(ret == null) {
-					if(!transactions.containsKey(handle.getHandle()) || ds == null)
+					if(!transactions.containsKey(handle) || ds == null)
 						throw new RpcFailedError("Invalid transaction handle",
 								DatastoreV3.Error.ErrorCode.BAD_REQUEST.getNumber());
 					try {
-					ret = ds.newTransaction();
+						ret = ds.newTransaction();
 					} catch(DatabaseException ex) {
 						throw new RpcFailedError(ex, DatastoreV3.Error.ErrorCode.INTERNAL_ERROR.getNumber());
 					}

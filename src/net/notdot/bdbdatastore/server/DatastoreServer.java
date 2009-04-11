@@ -36,13 +36,15 @@ public class DatastoreServer {
 	 * @throws EnvironmentLockedException 
 	 */
 	public static void main(String[] args) throws IOException, EnvironmentLockedException, DatabaseException {
-		if(args.length != 2) {
-			System.out.println(String.format("Usage: %s datastoredir", args[0]));
+		if(args.length != 1) {
+			System.out.println(String.format("Usage: DatastoreServer <datastoredir>"));
 			return;
 		}
 		
-		String datastore_path = args[1];
-		properties.load(new FileInputStream(new File(datastore_path, "datastore.properties")));
+		String datastore_path = args[0];
+		File prop_path = new File(datastore_path, "datastore.properties");
+		if(prop_path.exists())
+			properties.load(new FileInputStream(prop_path));
 		
 		datastore = new Datastore(datastore_path);
 
