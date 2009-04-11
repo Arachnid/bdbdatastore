@@ -1,11 +1,11 @@
 package net.notdot.protorpc;
 
-import org.apache.mina.core.session.IoSession;
+import org.jboss.netty.channel.Channel;
 
 import com.google.protobuf.RpcCallback;
 
 public class ProtoRpcController implements com.google.protobuf.RpcController {
-    protected IoSession session = null;
+    protected Channel channel = null;
 	protected String error = null;
 	protected int application_error = 0;
 	
@@ -17,8 +17,8 @@ public class ProtoRpcController implements com.google.protobuf.RpcController {
 		this.application_error = application_error;
 	}
 
-	protected ProtoRpcController(IoSession s) {
-		session = s;
+	protected ProtoRpcController(Channel ch) {
+		this.channel = ch;
 	}
 	
 	public String errorText() {
