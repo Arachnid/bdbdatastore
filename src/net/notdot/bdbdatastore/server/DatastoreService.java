@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import net.notdot.protorpc.ProtoRpcController;
+import net.notdot.protorpc.Rpc;
 import net.notdot.protorpc.RpcFailedError;
 
 import com.google.appengine.base.ApiBase.Integer64Proto;
@@ -163,8 +164,7 @@ public class DatastoreService extends
 	@Override
 	public void explain(RpcController controller, Query request,
 			RpcCallback<QueryExplanation> done) {
-		// TODO Auto-generated method stub
-
+		throw new RpcFailedError("Operation not supported.", DatastoreV3.Error.ErrorCode.BAD_REQUEST.getNumber());
 	}
 
 	@Override
@@ -216,8 +216,7 @@ public class DatastoreService extends
 	@Override
 	public void getSchema(RpcController controller, StringProto request,
 			RpcCallback<Schema> done) {
-		// TODO Auto-generated method stub
-
+		throw new RpcFailedError("Operation not supported.", DatastoreV3.Error.ErrorCode.BAD_REQUEST.getNumber());
 	}
 
 	@Override
@@ -282,8 +281,7 @@ public class DatastoreService extends
 	@Override
 	public void updateIndex(RpcController controller, CompositeIndex request,
 			RpcCallback<VoidProto> done) {
-		// TODO Auto-generated method stub
-
+		throw new RpcFailedError("Operation not supported.", DatastoreV3.Error.ErrorCode.BAD_REQUEST.getNumber());
 	}
 
 }
