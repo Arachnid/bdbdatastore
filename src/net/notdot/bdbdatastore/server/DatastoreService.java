@@ -120,8 +120,30 @@ public class DatastoreService extends
 	@Override
 	public void delete(RpcController controller, DeleteRequest request,
 			RpcCallback<VoidProto> done) {
-		// TODO Auto-generated method stub
+		if(request.getKeyCount() == 0) {
+			done.run(VoidProto.getDefaultInstance());
+			return;
+		}
+		
+		String app_id = request.getKey(0).getApp();
+		AppDatastore ds = this.datastore.getAppDatastore(app_id);
+		if(ds == null)
+			return;
 
+		try {
+			Transaction tx = this.getTransaction(request.getTransaction(), ds);
+			for(Reference ref : request.getKeyList()) {
+				if(ref.getApp() != app_id)
+					throw new RpcFailedError("All entities must have the same app_id",
+							DatastoreV3.Error.ErrorCode.BAD_REQUEST.getNumber());
+				ds.delete(ref, tx);
+			}
+		} catch(DeadlockException ex) {
+			throw new RpcFailedError("Operation was terminated to resolve a deadlock.",
+					DatastoreV3.Error.ErrorCode.CONCURRENT_TRANSACTION.getNumber());
+		} catch(DatabaseException ex) {
+			throw new RpcFailedError(ex, DatastoreV3.Error.ErrorCode.INTERNAL_ERROR.getNumber());
+		}
 	}
 
 	@Override
@@ -148,8 +170,7 @@ public class DatastoreService extends
 	@Override
 	public void get(RpcController c, GetRequest request,
 			RpcCallback<GetResponse> done) {
-		ProtoRpcController controller = (ProtoRpcController)c;
-				
+		
 		GetResponse.Builder response = GetResponse.newBuilder();
 		if(request.getKeyCount() == 0) {
 			done.run(response.build());
@@ -166,9 +187,8 @@ public class DatastoreService extends
 			
 			for(Reference ref : request.getKeyList()) {
 				if(ref.getApp() != app_id) {
-					controller.setFailed("All entities must have the same app_id");
-					controller.setApplicationError(DatastoreV3.Error.ErrorCode.BAD_REQUEST.getNumber());
-					return;
+					throw new RpcFailedError("All entities must have the same app_id",
+							DatastoreV3.Error.ErrorCode.BAD_REQUEST.getNumber());
 				}
 				Entity.Builder ent = Entity.newBuilder();
 				EntityProto entity = ds.get(ref, tx);
@@ -223,9 +243,17 @@ public class DatastoreService extends
 		
 		try {
 			Transaction tx = this.getTransaction(request.getTransaction(), ds);
-			for(EntityProto ent : request.getEntityList())
+			for(EntityProto ent : request.getEntityList()) {
+				if(ent.getKey().getApp() != app_id) {
+					throw new RpcFailedError("All entities must have the same app_id",
+							DatastoreV3.Error.ErrorCode.BAD_REQUEST.getNumber());
+				}
 				response.addKey(ds.put(ent, tx));
+			}
 			done.run(response.build());
+		} catch(DeadlockException ex) {
+			throw new RpcFailedError("Operation was terminated to resolve a deadlock.",
+					DatastoreV3.Error.ErrorCode.CONCURRENT_TRANSACTION.getNumber());
 		} catch(DatabaseException ex) {
 			throw new RpcFailedError(ex, DatastoreV3.Error.ErrorCode.INTERNAL_ERROR.getNumber());
 		}

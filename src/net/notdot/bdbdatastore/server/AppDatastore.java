@@ -114,4 +114,12 @@ public class AppDatastore {
 		TransactionConfig conf = new TransactionConfig();
 		return this.env.beginTransaction(null, conf);
 	}
+
+	public void delete(Reference ref, Transaction tx) throws DatabaseException {
+		DatabaseEntry key = new DatabaseEntry(ref.toByteArray());
+		OperationStatus status = entities.delete(tx, key);
+		if(status != OperationStatus.SUCCESS && status != OperationStatus.NOTFOUND) {
+			throw new DatabaseException(String.format("Failed to delete entity %s: delete returned %s", ref, status));
+		}
+	}
 }
