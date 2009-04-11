@@ -21,6 +21,8 @@ import com.sleepycat.je.EnvironmentLockedException;
 import com.sleepycat.je.OperationStatus;
 import com.sleepycat.je.Sequence;
 import com.sleepycat.je.SequenceConfig;
+import com.sleepycat.je.Transaction;
+import com.sleepycat.je.TransactionConfig;
 
 public class AppDatastore {
 	final Logger logger = LoggerFactory.getLogger(AppDatastore.class);
@@ -54,10 +56,10 @@ public class AppDatastore {
 		env.close();
 	}
 	
-	public EntityProto get(Reference ref) throws DatabaseException {
+	public EntityProto get(Reference ref, Transaction tx) throws DatabaseException {
 		DatabaseEntry key = new DatabaseEntry(ref.toByteArray());
 		DatabaseEntry value = new DatabaseEntry();
-		OperationStatus status = entities.get(null, key, value, null);
+		OperationStatus status = entities.get(tx, key, value, null);
 		if(status == OperationStatus.SUCCESS) {
 			try {
 				return EntityProto.parseFrom(value.getData());
@@ -86,7 +88,7 @@ public class AppDatastore {
 		return seq.get(null, 1);
 	}
 	
-	public Reference put(EntityProto entity) throws DatabaseException {
+	public Reference put(EntityProto entity, Transaction tx) throws DatabaseException {
 		Reference ref = entity.getKey();
 		int pathLen = ref.getPath().getElementCount();
 		Path.Element lastElement = ref.getPath().getElement(pathLen - 1);
@@ -101,9 +103,14 @@ public class AppDatastore {
 		
 		DatabaseEntry key = new DatabaseEntry(ref.toByteArray());
 		DatabaseEntry value = new DatabaseEntry(entity.toByteArray());
-		OperationStatus status = entities.put(null, key, value);
+		OperationStatus status = entities.put(tx, key, value);
 		if(status != OperationStatus.SUCCESS)
 			throw new DatabaseException(String.format("Failed to put entity %s: put returned %s", entity.getKey(), status));
 		return ref;
+	}
+
+	public Transaction newTransaction() throws DatabaseException {
+		TransactionConfig conf = new TransactionConfig();
+		return this.env.beginTransaction(null, conf);
 	}
 }

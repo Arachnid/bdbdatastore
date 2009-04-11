@@ -7,6 +7,8 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.channel.group.ChannelGroup;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.RpcCallback;
@@ -38,6 +40,8 @@ public class ProtoRpcHandler extends SimpleChannelHandler {
 			return called;
 		}
 	}
+
+	final Logger logger = LoggerFactory.getLogger(ProtoRpcHandler.class);
 
 	protected Service service;
 	protected ChannelGroup open_channels;
@@ -75,7 +79,15 @@ public class ProtoRpcHandler extends SimpleChannelHandler {
 
 		ProtoRpcCallback callback = new ProtoRpcCallback(ch);
 		ProtoRpcController controller = new ProtoRpcController(ch);
-		service.callMethod(method, controller, request_data, callback);
+		try {
+			service.callMethod(method, controller, request_data, callback);
+		} catch(RpcFailedError ex) {
+			if(ex.getCause() != null) {
+				logger.error("Internal error", ex.getCause());
+			}
+			controller.setFailed(ex.getMessage());
+			controller.setApplicationError(ex.getApplicationError());
+		}
 		if(!callback.isCalled()) {
 			if(controller.failed()) {
 				ch.write(Rpc.Response.newBuilder()
@@ -88,6 +100,5 @@ public class ProtoRpcHandler extends SimpleChannelHandler {
 						.setErrorDetail("RPC handler failed to issue a response").build());
 			}
 		}
-	}
-	
+	}	
 }

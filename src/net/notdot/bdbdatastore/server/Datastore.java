@@ -6,7 +6,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import net.notdot.protorpc.ProtoRpcController;
+import net.notdot.protorpc.RpcFailedError;
 
 import com.google.appengine.datastore_v3.DatastoreV3;
 import com.sleepycat.je.DatabaseException;
@@ -21,7 +21,7 @@ public class Datastore {
 		this.basedir = basedir;
 	}
 	
-	public AppDatastore getAppDatastore(ProtoRpcController controller, String app_id) {
+	public AppDatastore getAppDatastore(String app_id) {
 		AppDatastore ret = datastores.get(app_id);
 		if(ret != null)
 			return ret;
@@ -35,9 +35,8 @@ public class Datastore {
 				return ret;
 			} catch(DatabaseException ex) {
 				logger.error("Could not open datastore for app {}: {}", app_id, ex);
-				controller.setFailed(String.format("Unable to get datastore instance for app '%s'", app_id));
-				controller.setApplicationError(DatastoreV3.Error.ErrorCode.INTERNAL_ERROR.getNumber());
-				return null;
+				throw new RpcFailedError(String.format("Unable to get datastore instance for app '%s'", app_id),
+						DatastoreV3.Error.ErrorCode.INTERNAL_ERROR.getNumber());
 			}
 		}
 	}
