@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.appengine.entity.Entity.EntityProto;
+import com.google.appengine.entity.Entity.Path;
 import com.google.appengine.entity.Entity.Reference;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.sleepycat.je.Database;
@@ -75,6 +76,8 @@ public class AppDatastore {
 				if(seq == null) {
 					SequenceConfig conf = new SequenceConfig();
 					conf.setAllowCreate(true);
+					conf.setCacheSize(20);
+					conf.setInitialValue(1);
 					seq = entities.openSequence(null, new DatabaseEntry(ref.toByteArray()), conf);
 					this.sequences.put(ref, seq);
 				}
@@ -84,11 +87,23 @@ public class AppDatastore {
 	}
 	
 	public Reference put(EntityProto entity) throws DatabaseException {
-		DatabaseEntry key = new DatabaseEntry(entity.getKey().toByteArray());
+		Reference ref = entity.getKey();
+		int pathLen = ref.getPath().getElementCount();
+		Path.Element lastElement = ref.getPath().getElement(pathLen - 1);
+		if(lastElement.getId() == 0 && !lastElement.hasName()) {
+			long id = this.getId(ref);
+			ref = Reference.newBuilder(ref).setPath(
+					Path.newBuilder(ref.getPath())
+					.setElement(pathLen - 1, 
+							Path.Element.newBuilder(lastElement).setId(id))).build();
+			entity = EntityProto.newBuilder(entity).setKey(ref).build();
+		}
+		
+		DatabaseEntry key = new DatabaseEntry(ref.toByteArray());
 		DatabaseEntry value = new DatabaseEntry(entity.toByteArray());
 		OperationStatus status = entities.put(null, key, value);
 		if(status != OperationStatus.SUCCESS)
 			throw new DatabaseException(String.format("Failed to put entity %s: put returned %s", entity.getKey(), status));
-		return entity.getKey();
+		return ref;
 	}
 }
