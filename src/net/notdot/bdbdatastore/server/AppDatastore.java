@@ -7,10 +7,13 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.appengine.datastore_v3.DatastoreV3.Query;
+import com.google.appengine.entity.Entity;
 import com.google.appengine.entity.Entity.EntityProto;
 import com.google.appengine.entity.Entity.Path;
 import com.google.appengine.entity.Entity.Reference;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.sleepycat.je.Cursor;
 import com.sleepycat.je.Database;
 import com.sleepycat.je.DatabaseConfig;
 import com.sleepycat.je.DatabaseEntry;
@@ -134,5 +137,29 @@ public class AppDatastore {
 		if(status != OperationStatus.SUCCESS && status != OperationStatus.NOTFOUND) {
 			throw new DatabaseException(String.format("Failed to delete entity %s: delete returned %s", ref, status));
 		}
+	}
+
+	public DatastoreResultSet executeQuery(Query request) throws DatabaseException {
+		DatastoreResultSet ret = getEntityQueryPlan(request);
+		if(ret != null)
+			return ret;
+		//TODO: Handle running out of query plans
+		return null;
+	}
+
+	/* Attempts to generate a query plan for a scan by entity only */
+	private DatastoreResultSet getEntityQueryPlan(Query request) throws DatabaseException {
+		//TODO: Explicitly handle __key__ sort order specification.
+		if(request.hasAncestor() || request.getFilterCount() > 0 || request.getOrderCount() > 0)
+			return null;
+		
+		Cursor cursor = this.entities.openCursor(null, null);
+		// Create a key with just app and kind set.
+		Entity.Reference startKey = Entity.Reference.newBuilder()
+				.setApp(request.getApp())
+				.setPath(Entity.Path.newBuilder()
+						.addElement(Entity.Path.Element.newBuilder()
+								.setType(request.getKind()))).build();
+		return new DatastoreResultSet(cursor, startKey, request);
 	}
 }

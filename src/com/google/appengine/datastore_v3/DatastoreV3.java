@@ -725,11 +725,11 @@ public final class DatastoreV3 {
       }
     }
     
-    // required bytes app = 1;
+    // required string app = 1;
     private boolean hasApp;
-    private com.google.protobuf.ByteString app_ = com.google.protobuf.ByteString.EMPTY;
+    private java.lang.String app_ = "";
     public boolean hasApp() { return hasApp; }
-    public com.google.protobuf.ByteString getApp() { return app_; }
+    public java.lang.String getApp() { return app_; }
     
     // optional bytes kind = 3;
     private boolean hasKind;
@@ -922,21 +922,21 @@ public final class DatastoreV3 {
       }
       
       
-      // required bytes app = 1;
+      // required string app = 1;
       public boolean hasApp() {
         return result.hasApp();
       }
-      public com.google.protobuf.ByteString getApp() {
+      public java.lang.String getApp() {
         return result.getApp();
       }
-      public Builder setApp(com.google.protobuf.ByteString value) {
+      public Builder setApp(java.lang.String value) {
         result.hasApp = true;
         result.app_ = value;
         return this;
       }
       public Builder clearApp() {
         result.hasApp = false;
-        result.app_ = com.google.protobuf.ByteString.EMPTY;
+        result.app_ = "";
         return this;
       }
       
@@ -4701,7 +4701,7 @@ public final class DatastoreV3 {
       "\n\022datastore_v3.proto\022!com.google.appengi" +
       "ne.datastore_v3\032\014entity.proto\032\016api_base." +
       "proto\"\035\n\013Transaction\022\016\n\006handle\030\001 \002(\006\"\253\005\n" +
-      "\005Query\022\013\n\003app\030\001 \002(\014\022\014\n\004kind\030\003 \001(\014\0228\n\010anc" +
+      "\005Query\022\013\n\003app\030\001 \002(\t\022\014\n\004kind\030\003 \001(\014\0228\n\010anc" +
       "estor\030\021 \001(\0132&.com.google.appengine.entit" +
       "y.Reference\022?\n\006filter\030\004 \003(\n2/.com.google" +
       ".appengine.datastore_v3.Query.Filter\022\024\n\014" +

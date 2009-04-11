@@ -10,7 +10,6 @@ import com.google.appengine.base.ApiBase.StringProto;
 import com.google.appengine.base.ApiBase.VoidProto;
 import com.google.appengine.datastore_v3.DatastoreV3;
 import com.google.appengine.datastore_v3.DatastoreV3.CompositeIndices;
-import com.google.appengine.datastore_v3.DatastoreV3.Cursor;
 import com.google.appengine.datastore_v3.DatastoreV3.DeleteRequest;
 import com.google.appengine.datastore_v3.DatastoreV3.GetRequest;
 import com.google.appengine.datastore_v3.DatastoreV3.GetResponse;
@@ -39,6 +38,9 @@ public class DatastoreService extends
 	
 	protected long next_tx_id = 0;
 	protected Map<DatastoreV3.Transaction,Transaction> transactions = new HashMap<DatastoreV3.Transaction,Transaction>();
+	
+	protected long next_cursor_id = 0;
+	protected Map<DatastoreV3.Cursor,DatastoreResultSet> cursors = new HashMap<DatastoreV3.Cursor,DatastoreResultSet>();
 	
 	public DatastoreService(Datastore ds) {
 		this.datastore = ds;
@@ -130,8 +132,6 @@ public class DatastoreService extends
 		
 		String app_id = request.getKey(0).getApp();
 		AppDatastore ds = this.datastore.getAppDatastore(app_id);
-		if(ds == null)
-			return;
 
 		try {
 			Transaction tx = this.getTransaction(request.getTransaction(), ds);
@@ -151,7 +151,7 @@ public class DatastoreService extends
 	}
 
 	@Override
-	public void deleteCursor(RpcController controller, Cursor request,
+	public void deleteCursor(RpcController controller, DatastoreV3.Cursor request,
 			RpcCallback<VoidProto> done) {
 		// TODO Auto-generated method stub
 
@@ -182,8 +182,6 @@ public class DatastoreService extends
 		
 		String app_id = request.getKey(0).getApp();
 		AppDatastore ds = this.datastore.getAppDatastore(app_id);
-		if(ds == null)
-			return;
 
 		try {
 			Transaction tx = this.getTransaction(request.getTransaction(), ds);
@@ -240,8 +238,6 @@ public class DatastoreService extends
 		
 		String app_id = request.getEntity(0).getKey().getApp();
 		AppDatastore ds = this.datastore.getAppDatastore(app_id);
-		if(ds == null)
-			return;
 		
 		try {
 			Transaction tx = this.getTransaction(request.getTransaction(), ds);
@@ -279,8 +275,27 @@ public class DatastoreService extends
 	@Override
 	public void runQuery(RpcController controller, Query request,
 			RpcCallback<QueryResult> done) {
-		// TODO Auto-generated method stub
-
+		if(!request.hasKind())
+			throw new RpcFailedError("All queries must specify a kind.", DatastoreV3.Error.ErrorCode.BAD_REQUEST.getNumber());
+		
+		QueryResult.Builder response = QueryResult.newBuilder();
+		
+		String app_id = request.getApp();
+		AppDatastore ds = this.datastore.getAppDatastore(app_id);
+		
+		try {
+			DatastoreResultSet results = ds.executeQuery(request);
+			DatastoreV3.Cursor dscursor;
+			synchronized(this.cursors) {
+				dscursor = DatastoreV3.Cursor.newBuilder().setCursor(next_cursor_id++).build();
+			}
+			this.cursors.put(dscursor, results);
+			response.setCursor(dscursor);
+			done.run(response.build());
+		} catch(DatabaseException ex) {
+			throw new RpcFailedError(ex.toString(),
+					DatastoreV3.Error.ErrorCode.INTERNAL_ERROR.getNumber());
+		}
 	}
 
 	@Override

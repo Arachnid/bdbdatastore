@@ -22,7 +22,7 @@ message Transaction {
 // Query API
 //
 message Query {
-  required bytes app = 1;
+  required string app = 1;
 
   // kind and ancestor both restrict the query results. if kind is provided,
   // only entities of that kind are returned. if ancestor is provided, only
