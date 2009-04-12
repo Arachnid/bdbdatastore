@@ -3,6 +3,8 @@ package net.notdot.bdbdatastore.server;
 import static org.junit.Assert.*;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 
 import net.notdot.protorpc.ProtoRpcController;
@@ -18,6 +20,11 @@ import com.google.appengine.entity.Entity;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
+import com.google.protobuf.TextFormat;
+import com.google.protobuf.TextFormat.ParseException;
+import com.sleepycat.je.Cursor;
+import com.sleepycat.je.DatabaseEntry;
+import com.sleepycat.je.DatabaseException;
 
 public class DatastoreServiceTest {
 	protected class TestRpcCallback<T> implements RpcCallback<T> {
@@ -67,6 +74,7 @@ public class DatastoreServiceTest {
 	protected Datastore datastore;
 	protected DatastoreService service;
 	protected Entity.Reference sample_key = null;
+	protected DatastoreV3.PutRequest dataset_put;
 	
 	@Before
 	public void setUp() throws IOException {
@@ -75,6 +83,10 @@ public class DatastoreServiceTest {
 		basedir.mkdir();
 		datastore = new Datastore(basedir.getAbsolutePath());
 		service = new DatastoreService(datastore);
+
+		DatastoreV3.PutRequest.Builder request = DatastoreV3.PutRequest.newBuilder();
+		TextFormat.merge(new FileReader("test/dataset.txt"), request);
+		dataset_put = request.build();
 	}
 	
 	@After
@@ -276,5 +288,73 @@ public class DatastoreServiceTest {
 		TestRpcCallback<ApiBase.VoidProto> void_done = new TestRpcCallback<ApiBase.VoidProto>();
 		service.rollback(controller, tx, void_done);
 		assertTrue(void_done.isCalled());
+	}
+	
+	protected void loadCorpus() throws ParseException, FileNotFoundException, IOException {
+		// Insert the test corpus
+		RpcController controller = new ProtoRpcController();
+		TestRpcCallback<DatastoreV3.PutResponse> put_done = new TestRpcCallback<DatastoreV3.PutResponse>();
+		service.put(controller, dataset_put, put_done);
+		assertTrue(put_done.isCalled());
+	}
+	
+	@Test
+	public void testKeyComparer() {
+		Entity.Reference startKey = Entity.Reference.newBuilder()
+		.setApp("testapp")
+		.setPath(Entity.Path.newBuilder()
+				.addElement(Entity.Path.Element.newBuilder()
+						.setType(ByteString.copyFromUtf8("testtype")))).build();
+		assertTrue(ReferenceComparator.instance.compare(startKey, dataset_put.getEntity(0).getKey()) > 0);
+		assertTrue(ReferenceComparator.instance.compare(startKey, dataset_put.getEntity(1).getKey()) < 0);
+		assertTrue(ReferenceComparator.instance.compare(startKey, dataset_put.getEntity(2).getKey()) < 0);
+		assertTrue(ReferenceComparator.instance.compare(startKey, dataset_put.getEntity(3).getKey()) < 0);
+	}
+	
+	@Test
+	public void testEntityOrdering() throws ParseException, FileNotFoundException, IOException, DatabaseException {
+		loadCorpus();
+		AppDatastore ds = this.service.datastore.getAppDatastore("testapp");
+		Cursor cur = ds.entities.openCursor(null, null);
+		DatabaseEntry key = new DatabaseEntry();
+		DatabaseEntry data = new DatabaseEntry();
+		
+		cur.getFirst(key, data, null);
+		assertEquals(dataset_put.getEntity(0).getKey(), Entity.Reference.parseFrom(key.getData()));
+		assertEquals(dataset_put.getEntity(0), Entity.EntityProto.parseFrom(data.getData()));
+		
+		for(int i = 1; i < 4; i++) {
+			cur.getNext(key, data, null);
+			assertEquals(dataset_put.getEntity(i).getKey(), Entity.Reference.parseFrom(key.getData()));
+			assertEquals(dataset_put.getEntity(i), Entity.EntityProto.parseFrom(data.getData()));
+		}
+	}
+	
+	@Test
+	public void testEntityQuery() throws ParseException, FileNotFoundException, IOException {
+		RpcController controller = new ProtoRpcController();
+
+		loadCorpus();
+		
+		// Construct a query for a kind
+		DatastoreV3.Query query = DatastoreV3.Query.newBuilder()
+			.setApp("testapp")
+			.setKind(ByteString.copyFromUtf8("testtype")).build();
+		TestRpcCallback<DatastoreV3.QueryResult> query_done = new TestRpcCallback<DatastoreV3.QueryResult>();
+		service.runQuery(controller, query, query_done);
+		assertTrue(query_done.isCalled());
+		
+		// Get the results
+		controller = new ProtoRpcController();
+		DatastoreV3.NextRequest next = DatastoreV3.NextRequest.newBuilder()
+			.setCursor(query_done.getValue().getCursor())
+			.setCount(5).build();
+		query_done = new TestRpcCallback<DatastoreV3.QueryResult>();
+		service.next(controller, next, query_done);
+		assertTrue(query_done.isCalled());
+		
+		assertEquals(2, query_done.getValue().getResultCount());
+		assertEquals(dataset_put.getEntity(1), query_done.getValue().getResult(0));
+		assertEquals(dataset_put.getEntity(2), query_done.getValue().getResult(1));
 	}
 }

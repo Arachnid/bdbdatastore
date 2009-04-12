@@ -32,17 +32,24 @@ public class AppDatastore {
 	final Logger logger = LoggerFactory.getLogger(AppDatastore.class);
 	
 	protected String app_id;
+	
 	// The database environment, containing all the tables and indexes.
 	protected Environment env;
+	
 	// The primary entities table. The primary key is the encoded Reference protocol buffer.
 	// References are sorted first by kind, then by path, so we can also use this to satisfy
 	// kind and ancestor queries.
 	protected Database entities;
+	
+	// This table stores counter values. We can't store them in the entities table, because getSequence
+	// inserts records in the database it's called on.
+	protected Database sequences;
+	
 	// We define a single built-in index for satisfying equality queries on fields.
 	protected SecondaryDatabase entities_by_property;
 	
 	// Cached sequences
-	protected Map<Reference, Sequence> sequences = new HashMap<Reference, Sequence>();
+	protected Map<Reference, Sequence> sequence_cache = new HashMap<Reference, Sequence>();
 	
 	public AppDatastore(String basedir, String app_id)
 			throws EnvironmentLockedException, DatabaseException {
@@ -62,12 +69,12 @@ public class AppDatastore {
 		dbconfig.setTransactional(true);
 		dbconfig.setBtreeComparator(SerializedReferenceComparator.class);
 		entities = env.openDatabase(null, "entities", dbconfig);
-		
-		env.openDatabase(null, "blahtest", dbconfig);
+
+		sequences = env.openDatabase(null, "sequences", dbconfig);
 	}
 	
 	public void close() throws DatabaseException {
-		for(Sequence seq : this.sequences.values())
+		for(Sequence seq : this.sequence_cache.values())
 			seq.close();
 		entities.close();
 		env.close();
@@ -88,17 +95,17 @@ public class AppDatastore {
 	}
 	
 	protected long getId(Reference ref) throws DatabaseException {
-		Sequence seq = this.sequences.get(ref);
+		Sequence seq = this.sequence_cache.get(ref);
 		if(seq == null) {
-			synchronized(this.sequences) {
-				seq = this.sequences.get(ref);
+			synchronized(this.sequence_cache) {
+				seq = this.sequence_cache.get(ref);
 				if(seq == null) {
 					SequenceConfig conf = new SequenceConfig();
 					conf.setAllowCreate(true);
 					conf.setCacheSize(DatastoreServer.properties.getInt("datastore.sequence.cache_size", 20));
 					conf.setInitialValue(1);
 					seq = entities.openSequence(null, new DatabaseEntry(ref.toByteArray()), conf);
-					this.sequences.put(ref, seq);
+					this.sequence_cache.put(ref, seq);
 				}
 			}
 		}

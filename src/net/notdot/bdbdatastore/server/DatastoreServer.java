@@ -50,9 +50,9 @@ public class DatastoreServer {
 
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
-				datastore.close();
 				ChannelGroupFuture future = openChannels.close();
 				future.awaitUninterruptibly();
+				datastore.close();
 				factory.releaseExternalResources();
 			}
 		});

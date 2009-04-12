@@ -5,6 +5,7 @@ import java.util.Map;
 
 import net.notdot.protorpc.RpcFailedError;
 
+import com.google.appengine.base.ApiBase;
 import com.google.appengine.base.ApiBase.Integer64Proto;
 import com.google.appengine.base.ApiBase.StringProto;
 import com.google.appengine.base.ApiBase.VoidProto;
@@ -50,10 +51,13 @@ public class DatastoreService extends
 	protected void finalize() throws Throwable {
 		super.finalize();
 		
+		// Close any open cursors
+		for(DatastoreResultSet cursor : this.cursors.values())
+			cursor.close();
+
 		// Clean up any outstanding transactions
-		for(Transaction tx : this.transactions.values()) {
+		for(Transaction tx : this.transactions.values())
 			tx.abort();
-		}
 	}
 	
 	protected Transaction getTransaction(DatastoreV3.Transaction handle, AppDatastore ds) {
@@ -153,8 +157,21 @@ public class DatastoreService extends
 	@Override
 	public void deleteCursor(RpcController controller, DatastoreV3.Cursor request,
 			RpcCallback<VoidProto> done) {
-		// TODO Auto-generated method stub
-
+		DatastoreResultSet cursor;
+		
+		synchronized(this.cursors) {
+			cursor = this.cursors.get(request.getCursor());
+			if(cursor == null)
+				throw new RpcFailedError("Invalid cursor", DatastoreV3.Error.ErrorCode.BAD_REQUEST.getNumber());
+			this.cursors.remove(request.getCursor());
+		}
+		
+		try {
+			cursor.close();
+			done.run(ApiBase.VoidProto.getDefaultInstance());
+		} catch(DatabaseException ex) {
+			throw new RpcFailedError(ex, DatastoreV3.Error.ErrorCode.INTERNAL_ERROR.getNumber());
+		}
 	}
 
 	@Override
@@ -223,8 +240,21 @@ public class DatastoreService extends
 	@Override
 	public void next(RpcController controller, NextRequest request,
 			RpcCallback<QueryResult> done) {
-		// TODO Auto-generated method stub
-
+		QueryResult.Builder response = QueryResult.newBuilder();
+		
+		DatastoreResultSet cursor = this.cursors.get(request.getCursor());
+		if(cursor == null)
+			throw new RpcFailedError("Invalid cursor", DatastoreV3.Error.ErrorCode.BAD_REQUEST.getNumber());
+		
+		try {
+			response.setCursor(request.getCursor());
+			response.addAllResult(cursor.getNext(request.getCount()));
+			response.setMoreResults(cursor.hasMore());
+			
+			done.run(response.build());
+		} catch(DatabaseException ex) {
+			throw new RpcFailedError(ex, DatastoreV3.Error.ErrorCode.INTERNAL_ERROR.getNumber());
+		}
 	}
 
 	@Override
@@ -291,6 +321,7 @@ public class DatastoreService extends
 			}
 			this.cursors.put(dscursor, results);
 			response.setCursor(dscursor);
+			response.setMoreResults(true);
 			done.run(response.build());
 		} catch(DatabaseException ex) {
 			throw new RpcFailedError(ex.toString(),

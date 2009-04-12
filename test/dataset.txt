@@ -1,0 +1,114 @@
+entity {
+  key {
+    app: "testapp"
+    path {
+      Element {
+        type: "aaa"
+        name: "foo"
+      }
+    }
+  }
+  property {
+    name: "foo"
+    value {
+      int64Value: 1
+    }
+  }
+  property {
+    name: "bar"
+    value {
+      stringValue: "Aaaa!"
+    }
+  }
+  entity_group {
+    Element {
+      type: "testtype"
+    }
+  }
+}
+entity {
+  key {
+    app: "testapp"
+    path {
+      Element {
+        type: "testtype"
+        name: "bar"
+      }
+    }
+  }
+  property {
+    name: "foo"
+    value {
+      int64Value: 1235
+    }
+  }
+  property {
+    name: "bar"
+    value {
+      stringValue: "Hello, world!"
+    }
+  }
+  entity_group {
+    Element {
+      type: "testtype"
+      name: "testname"
+    }
+  }
+}
+entity {
+  key {
+    app: "testapp"
+    path {
+      Element {
+        type: "testtype"
+        name: "testname"
+      }
+    }
+  }
+  property {
+    name: "foo"
+    value {
+      int64Value: 1234
+    }
+  }
+  property {
+    name: "bar"
+    value {
+      stringValue: "Hello, world!"
+    }
+  }
+  entity_group {
+    Element {
+      type: "testtype"
+      name: "testname"
+    }
+  }
+}
+entity {
+  key {
+    app: "testapp"
+    path {
+      Element {
+        type: "zzz"
+        name: "baz"
+      }
+    }
+  }
+  property {
+    name: "foo"
+    value {
+      int64Value: 9999
+    }
+  }
+  property {
+    name: "bar"
+    value {
+      stringValue: "Zzzz!"
+    }
+  }
+  entity_group {
+    Element {
+      type: "testtype"
+    }
+  }
+}
