@@ -35,6 +35,11 @@ public class DatastoreResultSet {
 		this.startKey = startKey;
 		this.query = query;
 		
+		// Index the filter properties
+		for(DatastoreV3.Query.Filter filter : query.getFilterList())
+			for(Entity.Property prop : filter.getPropertyList())
+				filters.put(prop.getName(), filter);
+		
 		if(query.hasLimit())
 			this.remaining = query.getLimit();
 		

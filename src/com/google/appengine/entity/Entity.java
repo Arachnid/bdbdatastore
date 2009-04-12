@@ -696,11 +696,11 @@ public final class Entity {
         }
       }
       
-      // required bytes app = 13;
+      // required string app = 13;
       private boolean hasApp;
-      private com.google.protobuf.ByteString app_ = com.google.protobuf.ByteString.EMPTY;
+      private java.lang.String app_ = "";
       public boolean hasApp() { return hasApp; }
-      public com.google.protobuf.ByteString getApp() { return app_; }
+      public java.lang.String getApp() { return app_; }
       
       // repeated group PathElement = 14 {
       private java.util.List<com.google.appengine.entity.Entity.PropertyValue.ReferenceValue.PathElement> pathElement_ =
@@ -827,21 +827,21 @@ public final class Entity {
         }
         
         
-        // required bytes app = 13;
+        // required string app = 13;
         public boolean hasApp() {
           return result.hasApp();
         }
-        public com.google.protobuf.ByteString getApp() {
+        public java.lang.String getApp() {
           return result.getApp();
         }
-        public Builder setApp(com.google.protobuf.ByteString value) {
+        public Builder setApp(java.lang.String value) {
           result.hasApp = true;
           result.app_ = value;
           return this;
         }
         public Builder clearApp() {
           result.hasApp = false;
-          result.app_ = com.google.protobuf.ByteString.EMPTY;
+          result.app_ = "";
           return this;
         }
         
@@ -4032,7 +4032,7 @@ public final class Entity {
       "\001\022\t\n\001y\030\007 \002(\001\032Q\n\tUserValue\022\r\n\005email\030\t \002(\014" +
       "\022\023\n\013auth_domain\030\n \002(\014\022\020\n\010nickname\030\013 \001(\t\022" +
       "\016\n\006gaiaid\030\022 \002(\003\032\260\001\n\016ReferenceValue\022\013\n\003ap" +
-      "p\030\r \002(\014\022Z\n\013pathelement\030\016 \003(\n2E.com.googl" +
+      "p\030\r \002(\t\022Z\n\013pathelement\030\016 \003(\n2E.com.googl" +
       "e.appengine.entity.PropertyValue.Referen" +
       "ceValue.PathElement\0325\n\013PathElement\022\014\n\004ty" +
       "pe\030\017 \002(\014\022\n\n\002id\030\020 \001(\003\022\014\n\004name\030\021 \001(\014\"\262\003\n\010P" +

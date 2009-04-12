@@ -33,7 +33,7 @@ message PropertyValue {
   // stand-alone Reference and Path PBs defined below. If you amend
   // this group, amend those PB definitions in this file as well.
   optional group ReferenceValue = 12 {
-    required bytes app = 13;
+    required string app = 13;
     repeated group PathElement = 14 {
       required bytes type = 15;
       // either name or id should be set

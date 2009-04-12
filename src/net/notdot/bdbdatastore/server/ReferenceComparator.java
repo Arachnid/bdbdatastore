@@ -9,6 +9,21 @@ import com.google.protobuf.ByteString;
 public class ReferenceComparator implements Comparator<Entity.Reference> {
 	public final static ReferenceComparator instance = new ReferenceComparator();
 	
+	public static Entity.Reference toReference(Entity.PropertyValue.ReferenceValue refval) {
+		Entity.Path.Builder path = Entity.Path.newBuilder();
+		for(Entity.PropertyValue.ReferenceValue.PathElement pathel : refval.getPathElementList()) {
+			Entity.Path.Element.Builder element = Entity.Path.Element.newBuilder();
+			element.setType(pathel.getType());
+			if(pathel.hasName())
+				element.setName(pathel.getName());
+			if(pathel.hasId())
+				element.setId(pathel.getId());
+			path.addElement(element);
+		}
+		
+		return Entity.Reference.newBuilder().setApp(refval.getApp()).setPath(path).build();
+	}
+	
 	protected int compareElements(Entity.Path.Element e1, Entity.Path.Element e2) {
 		int ret = e1.getType().asReadOnlyByteBuffer().compareTo(e2.getType().asReadOnlyByteBuffer());
 		if(ret != 0)
