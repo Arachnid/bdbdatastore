@@ -343,6 +343,7 @@ public class DatastoreServiceTest {
 		TestRpcCallback<DatastoreV3.QueryResult> query_done = new TestRpcCallback<DatastoreV3.QueryResult>();
 		service.runQuery(controller, query, query_done);
 		assertTrue(query_done.isCalled());
+		assertTrue(service.cursors.containsKey(query_done.getValue().getCursor()));
 		
 		// Get the results
 		controller = new ProtoRpcController();
@@ -356,5 +357,12 @@ public class DatastoreServiceTest {
 		assertEquals(2, query_done.getValue().getResultCount());
 		assertEquals(dataset_put.getEntity(1), query_done.getValue().getResult(0));
 		assertEquals(dataset_put.getEntity(2), query_done.getValue().getResult(1));
+		
+		// Delete the cursor
+		controller = new ProtoRpcController();
+		TestRpcCallback<ApiBase.VoidProto> delete_done = new TestRpcCallback<ApiBase.VoidProto>();
+		service.deleteCursor(controller, query_done.getValue().getCursor(), delete_done);
+		assertTrue(delete_done.isCalled());
+		assertFalse(service.cursors.containsKey(query_done.getValue().getCursor()));
 	}
 }

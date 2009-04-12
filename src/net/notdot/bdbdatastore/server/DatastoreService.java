@@ -160,10 +160,10 @@ public class DatastoreService extends
 		DatastoreResultSet cursor;
 		
 		synchronized(this.cursors) {
-			cursor = this.cursors.get(request.getCursor());
+			cursor = this.cursors.get(request);
 			if(cursor == null)
 				throw new RpcFailedError("Invalid cursor", DatastoreV3.Error.ErrorCode.BAD_REQUEST.getNumber());
-			this.cursors.remove(request.getCursor());
+			this.cursors.remove(request);
 		}
 		
 		try {
