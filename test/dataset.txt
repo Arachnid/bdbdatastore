@@ -3,21 +3,21 @@ entity {
     app: "testapp"
     path {
       Element {
-        type: "aaa"
+        type: "sss"
         name: "foo"
       }
-    }
-  }
-  property {
-    name: "foo"
-    value {
-      int64Value: 1
     }
   }
   property {
     name: "bar"
     value {
       stringValue: "Aaaa!"
+    }
+  }
+  property {
+    name: "foo"
+    value {
+      int64Value: 1
     }
   }
   entity_group {
@@ -37,15 +37,15 @@ entity {
     }
   }
   property {
-    name: "foo"
-    value {
-      int64Value: 1235
-    }
-  }
-  property {
     name: "bar"
     value {
       stringValue: "Hello, world!"
+    }
+  }
+  property {
+    name: "foo"
+    value {
+      int64Value: 1235
     }
   }
   entity_group {
@@ -66,15 +66,15 @@ entity {
     }
   }
   property {
-    name: "foo"
-    value {
-      int64Value: 1234
-    }
-  }
-  property {
     name: "bar"
     value {
       stringValue: "Hello, world!"
+    }
+  }
+  property {
+    name: "foo"
+    value {
+      int64Value: 1234
     }
   }
   entity_group {
@@ -89,15 +89,9 @@ entity {
     app: "testapp"
     path {
       Element {
-        type: "zzz"
+        type: "uuu"
         name: "baz"
       }
-    }
-  }
-  property {
-    name: "foo"
-    value {
-      int64Value: 9999
     }
   }
   property {
@@ -106,9 +100,116 @@ entity {
       stringValue: "Zzzz!"
     }
   }
+  property {
+    name: "foo"
+    value {
+      int64Value: 9999
+    }
+  }
   entity_group {
     Element {
       type: "testtype"
+    }
+  }
+}
+entity {
+  key {
+    app: "testapp"
+    path {
+      Element {
+        type: "vtype"
+        name: "bar"
+      }
+    }
+  }
+  entity_group {
+    Element {
+      type: "vtype"
+      type: "bar"
+    }
+  }
+}
+entity {
+  key {
+    app: "testapp"
+    path {
+      Element {
+        type: "vtype"
+        name: "bar"
+      }
+      Element {
+        type: "atype"
+        name: "bleh"
+      }
+      Element {
+        type: "vtype"
+        name: "foo"
+      }
+    }
+  }
+  entity_group {
+    Element {
+      type: "vtype"
+      type: "bar"
+    }
+  }
+}
+entity {
+  key {
+    app: "testapp"
+    path {
+      Element {
+        type: "vtype"
+        name: "bar"
+      }
+      Element {
+        type: "ztype"
+        name: "baz"
+      }
+    }
+  }
+  entity_group {
+    Element {
+      type: "vtype"
+      type: "bar"
+    }
+  }
+}
+entity {
+  key {
+    app: "testapp"
+    path {
+      Element {
+        type: "vtype"
+        name: "bar"
+      }
+      Element {
+        type: "vtype"
+        name: "baz"
+      }
+    }
+  }
+  entity_group {
+    Element {
+      type: "vtype"
+      type: "bar"
+    }
+  }
+}
+entity {
+  key {
+    app: "testapp"
+    path {
+      Element {
+        type: "vtype"
+        name: "foo"
+      }
+    }
+  }
+  entity_group {
+    Element {
+      type: "vtype"
+      type: "foo"
     }
   }
 }

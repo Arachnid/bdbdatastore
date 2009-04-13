@@ -58,11 +58,11 @@ public class DatastoreServiceTest {
 		.setKey(testkey)
 		.setEntityGroup(testkey.getPath())
 		.addProperty(Entity.Property.newBuilder()
-				.setName(ByteString.copyFromUtf8("foo"))
-				.setValue(Entity.PropertyValue.newBuilder().setInt64Value(1234)))
-		.addProperty(Entity.Property.newBuilder()
 				.setName(ByteString.copyFromUtf8("bar"))
-				.setValue(Entity.PropertyValue.newBuilder().setStringValue(ByteString.copyFromUtf8("Hello, world!")))).build();
+				.setValue(Entity.PropertyValue.newBuilder().setStringValue(ByteString.copyFromUtf8("Hello, world!"))))
+	.addProperty(Entity.Property.newBuilder()
+			.setName(ByteString.copyFromUtf8("foo"))
+			.setValue(Entity.PropertyValue.newBuilder().setInt64Value(1234))).build();
 	
 	// Sample entity with no ID
 	protected static Entity.EntityProto testnewent = Entity.EntityProto.newBuilder(testent)
@@ -217,6 +217,7 @@ public class DatastoreServiceTest {
 		// Entity with assigned ID was retrieved correctly
 		assertEquals(done.getValue().getEntity(1).getEntity().getKey(), sample_key);
 		assertEquals(done.getValue().getEntity(1).getEntity().getPropertyList(), testnewent.getPropertyList());
+		assertEquals(done.getValue().getEntity(1).getEntity().getEntityGroup(), sample_key.getPath());
 	}
 
 	@Test
@@ -235,8 +236,8 @@ public class DatastoreServiceTest {
 		// Entity with no id was inserted correctly and assigned an id
 		sample_key = done.getValue().getKey(1);
 		assertEquals(sample_key.getApp(), testkey.getApp());
-		assertEquals(sample_key.getPath().getElementCount(), 1);
-		assertEquals(sample_key.getPath().getElement(0).getType(), testkey.getPath().getElement(0).getType());
+		assertEquals(1, sample_key.getPath().getElementCount());
+		assertEquals(testnewent.getKey().getPath().getElement(0).getType(), sample_key.getPath().getElement(0).getType());
 		assertTrue(sample_key.getPath().getElement(0).hasId());
 		assertTrue(sample_key.getPath().getElement(0).getId() > 0);
 	}
@@ -364,5 +365,40 @@ public class DatastoreServiceTest {
 		service.deleteCursor(controller, query_done.getValue().getCursor(), delete_done);
 		assertTrue(delete_done.isCalled());
 		assertFalse(service.cursors.containsKey(query_done.getValue().getCursor()));
+	}
+	
+	@Test
+	public void testAncestorQuery() throws ParseException, FileNotFoundException, IOException {
+		RpcController controller = new ProtoRpcController();
+
+		loadCorpus();
+		
+		DatastoreV3.Query query = DatastoreV3.Query.newBuilder()
+			.setApp("testapp")
+			.setKind(ByteString.copyFromUtf8("vtype"))
+			.setAncestor(Entity.Reference.newBuilder()
+				.setApp("testapp")
+				.setPath(Entity.Path.newBuilder()
+					.addElement(Entity.Path.Element.newBuilder()
+						.setType(ByteString.copyFromUtf8("vtype"))
+						.setName(ByteString.copyFromUtf8("bar"))))).build();
+		TestRpcCallback<DatastoreV3.QueryResult> query_done = new TestRpcCallback<DatastoreV3.QueryResult>();
+		service.runQuery(controller, query, query_done);
+		assertTrue(query_done.isCalled());
+		assertTrue(service.cursors.containsKey(query_done.getValue().getCursor()));
+		
+		// Get the results
+		controller = new ProtoRpcController();
+		DatastoreV3.NextRequest next = DatastoreV3.NextRequest.newBuilder()
+			.setCursor(query_done.getValue().getCursor())
+			.setCount(5).build();
+		query_done = new TestRpcCallback<DatastoreV3.QueryResult>();
+		service.next(controller, next, query_done);
+		assertTrue(query_done.isCalled());
+		
+		assertEquals(3, query_done.getValue().getResultCount());
+		assertEquals(dataset_put.getEntity(4), query_done.getValue().getResult(0));
+		assertEquals(dataset_put.getEntity(5), query_done.getValue().getResult(1));
+		assertEquals(dataset_put.getEntity(7), query_done.getValue().getResult(2));
 	}
 }

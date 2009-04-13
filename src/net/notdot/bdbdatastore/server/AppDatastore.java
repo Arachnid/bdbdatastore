@@ -1,7 +1,10 @@
 package net.notdot.bdbdatastore.server;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -11,6 +14,7 @@ import com.google.appengine.datastore_v3.DatastoreV3.Query;
 import com.google.appengine.entity.Entity;
 import com.google.appengine.entity.Entity.EntityProto;
 import com.google.appengine.entity.Entity.Path;
+import com.google.appengine.entity.Entity.Property;
 import com.google.appengine.entity.Entity.Reference;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.sleepycat.je.Cursor;
@@ -76,6 +80,7 @@ public class AppDatastore {
 	public void close() throws DatabaseException {
 		for(Sequence seq : this.sequence_cache.values())
 			seq.close();
+		sequences.close();
 		entities.close();
 		env.close();
 	}
@@ -113,6 +118,12 @@ public class AppDatastore {
 	}
 	
 	public Reference put(EntityProto entity, Transaction tx) throws DatabaseException {
+		// Sort the properties for easy filtering on retrieval.
+		List<Property> properties = new ArrayList<Property>(entity.getPropertyList());
+		Collections.sort(properties, PropertyComparator.instance);
+		entity = Entity.EntityProto.newBuilder(entity).clearProperty().addAllProperty(properties).build();
+		
+		// Generate and set the ID if necessary.
 		Reference ref = entity.getKey();
 		int pathLen = ref.getPath().getElementCount();
 		Path.Element lastElement = ref.getPath().getElement(pathLen - 1);
@@ -122,7 +133,11 @@ public class AppDatastore {
 					Path.newBuilder(ref.getPath())
 					.setElement(pathLen - 1, 
 							Path.Element.newBuilder(lastElement).setId(id))).build();
-			entity = EntityProto.newBuilder(entity).setKey(ref).build();
+			if(ref.getPath().getElementCount() == 1) {
+				entity = EntityProto.newBuilder(entity).setEntityGroup(ref.getPath()).setKey(ref).build();
+			} else {
+				entity = EntityProto.newBuilder(entity).setKey(ref).build();
+			}
 		}
 		
 		DatabaseEntry key = new DatabaseEntry(ref.toByteArray());
@@ -150,13 +165,27 @@ public class AppDatastore {
 		DatastoreResultSet ret = getEntityQueryPlan(request);
 		if(ret != null)
 			return ret;
+		ret = getAncestorQueryPlan(request);
+		if(ret != null)
+			return ret;
 		//TODO: Handle running out of query plans
 		return null;
 	}
 
+	/* Attempts to generate a query by ancestor and entity */
+	private DatastoreResultSet getAncestorQueryPlan(Query request) throws DatabaseException {
+		//TODO: Explicitly handle __key__ sort order
+		if(!request.hasAncestor() || request.getFilterCount() > 0 || request.getOrderCount() > 0)
+			return null;
+		
+		Cursor cursor = this.entities.openCursor(null, null);
+		// The start key is the specified ancestor
+		return new DatastoreResultSet(cursor, request.getAncestor(), request);
+	}
+
 	/* Attempts to generate a query plan for a scan by entity only */
 	private DatastoreResultSet getEntityQueryPlan(Query request) throws DatabaseException {
-		//TODO: Explicitly handle __key__ sort order specification.
+		//TODO: Handle __key__ sort order and filter specifications.
 		if(request.hasAncestor() || request.getFilterCount() > 0 || request.getOrderCount() > 0)
 			return null;
 		

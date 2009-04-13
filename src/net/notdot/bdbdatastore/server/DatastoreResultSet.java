@@ -28,17 +28,11 @@ public class DatastoreResultSet {
 	protected DatastoreV3.Query query;
 	protected boolean started = false;
 	protected int remaining = -1;
-	protected Map<ByteString, DatastoreV3.Query.Filter> filters = new HashMap<ByteString, DatastoreV3.Query.Filter>();
 
 	public DatastoreResultSet(Cursor cur, Message startKey, DatastoreV3.Query query) throws DatabaseException {
 		this.cursor = cur;
 		this.startKey = startKey;
 		this.query = query;
-		
-		// Index the filter properties
-		for(DatastoreV3.Query.Filter filter : query.getFilterList())
-			for(Entity.Property prop : filter.getPropertyList())
-				filters.put(prop.getName(), filter);
 		
 		if(query.hasLimit())
 			this.remaining = query.getLimit();
@@ -96,13 +90,28 @@ public class DatastoreResultSet {
 		
 		Entity.Reference ref = entity.getKey();
 		
+		// Check ancestor
+		if(this.query.hasAncestor()) {
+			Entity.Path ancestor = this.query.getAncestor().getPath();
+			if(ref.getPath().getElementCount() < ancestor.getElementCount()) {
+				remaining = 0;
+				return null;
+			}
+			for(int i = 0; i < ancestor.getElementCount(); i++) {
+				if(!ref.getPath().getElement(i).equals(ancestor.getElement(i))) {
+					remaining = 0;
+					return null;
+				}
+			}
+		}
+		
 		Entity.Path.Element lastElement = ref.getPath().getElement(ref.getPath().getElementCount() - 1);
 		// Check kind
 		if(!lastElement.getType().equals(this.query.getKind())) {
 			remaining = 0;
 			return null;
 		}
-		
+				
 		// Check app (should always match)
 		if(!ref.getApp().equals(this.query.getApp())) {
 			logger.error("Entity with app_id {} encountered when processing records for app_id {}", ref.getApp(), this.query.getApp());

@@ -5,7 +5,8 @@ import java.util.Comparator;
 import com.google.appengine.entity.Entity;
 
 public class PropertyComparator implements Comparator<Entity.Property> {
-
+	public static final PropertyComparator instance = new PropertyComparator();
+	
 	public int compare(Entity.Property o1, Entity.Property o2) {
 		int ret = o1.getName().asReadOnlyByteBuffer().compareTo(o2.getName().asReadOnlyByteBuffer());
 		if(ret != 0)
