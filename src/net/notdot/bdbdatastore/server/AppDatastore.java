@@ -26,6 +26,7 @@ import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.EnvironmentLockedException;
 import com.sleepycat.je.OperationStatus;
+import com.sleepycat.je.SecondaryConfig;
 import com.sleepycat.je.SecondaryDatabase;
 import com.sleepycat.je.Sequence;
 import com.sleepycat.je.SequenceConfig;
@@ -55,6 +56,12 @@ public class AppDatastore {
 	// Cached sequences
 	protected Map<Reference, Sequence> sequence_cache = new HashMap<Reference, Sequence>();
 	
+	/**
+	 * @param basedir
+	 * @param app_id
+	 * @throws EnvironmentLockedException
+	 * @throws DatabaseException
+	 */
 	public AppDatastore(String basedir, String app_id)
 			throws EnvironmentLockedException, DatabaseException {
 		this.app_id = app_id;
@@ -73,8 +80,18 @@ public class AppDatastore {
 		dbconfig.setTransactional(true);
 		dbconfig.setBtreeComparator(SerializedReferenceComparator.class);
 		entities = env.openDatabase(null, "entities", dbconfig);
-
+		
 		sequences = env.openDatabase(null, "sequences", dbconfig);
+
+		SecondaryConfig secondconfig = new SecondaryConfig();
+		secondconfig.setAllowCreate(true);
+		secondconfig.setAllowPopulate(true);
+		secondconfig.setBtreeComparator(SerializedPropertyIndexKeyComparator.class);
+		secondconfig.setDuplicateComparator(SerializedReferenceComparator.class);
+		secondconfig.setMultiKeyCreator(new SinglePropertyIndexer());
+		secondconfig.setSortedDuplicates(true);
+		secondconfig.setTransactional(true);
+		entities_by_property = env.openSecondaryDatabase(null, "entities_by_property", entities, secondconfig);
 	}
 	
 	public void close() throws DatabaseException {
@@ -109,7 +126,7 @@ public class AppDatastore {
 					conf.setAllowCreate(true);
 					conf.setCacheSize(DatastoreServer.properties.getInt("datastore.sequence.cache_size", 20));
 					conf.setInitialValue(1);
-					seq = entities.openSequence(null, new DatabaseEntry(ref.toByteArray()), conf);
+					seq = sequences.openSequence(null, new DatabaseEntry(ref.toByteArray()), conf);
 					this.sequence_cache.put(ref, seq);
 				}
 			}

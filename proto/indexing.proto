@@ -1,0 +1,12 @@
+package net.notdot.bdbdatastore;
+
+import "entity.proto";
+import "api_base.proto";
+
+// Index key for single property indices
+message PropertyIndexKey {
+  required bytes kind = 1;
+  required bytes name = 2;
+  required com.google.appengine.entity.PropertyValue value = 3;
+}
+ 
