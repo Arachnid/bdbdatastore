@@ -185,8 +185,27 @@ public class AppDatastore {
 		ret = getAncestorQueryPlan(request);
 		if(ret != null)
 			return ret;
+		ret = getSinglePropertyQueryPlan(request);
+		if(ret != null)
+			return ret;
+		ret = getMergeJoinQueryPlan(request);
+		if(ret != null)
+			return ret;
 		//TODO: Handle running out of query plans
 		return null;
+	}
+
+	/* Attempts to generate a merge join multiple-equality query. */
+	private DatastoreResultSet getMergeJoinQueryPlan(Query request) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	/* Attempts to generate a query on a single-property index. */
+	private DatastoreResultSet getSinglePropertyQueryPlan(Query request) {
+		if(request.hasAncestor() || request.getOrderCount() > 1)
+			return null;
+		
 	}
 
 	/* Attempts to generate a query by ancestor and entity */

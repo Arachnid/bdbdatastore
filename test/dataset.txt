@@ -125,7 +125,7 @@ entity {
   entity_group {
     Element {
       type: "vtype"
-      type: "bar"
+      name: "bar"
     }
   }
 }
@@ -150,7 +150,7 @@ entity {
   entity_group {
     Element {
       type: "vtype"
-      type: "bar"
+      name: "bar"
     }
   }
 }
@@ -171,7 +171,7 @@ entity {
   entity_group {
     Element {
       type: "vtype"
-      type: "bar"
+      name: "bar"
     }
   }
 }
@@ -192,7 +192,7 @@ entity {
   entity_group {
     Element {
       type: "vtype"
-      type: "bar"
+      name: "bar"
     }
   }
 }
@@ -209,7 +209,77 @@ entity {
   entity_group {
     Element {
       type: "vtype"
-      type: "foo"
+      name: "foo"
+    }
+  }
+}
+entity {
+  key {
+    app: "testapp"
+    path {
+      Element {
+        type: "wtype"
+        name: "a"
+      }
+    }
+  }
+  entity_group {
+    Element {
+      type: "wtype"
+      name: "a"
+    }
+  }
+  property {
+    name: "tags"
+	value {
+      stringValue: "foo"
+    }
+  }
+  property {
+    name: "tags"
+    value {
+      stringValue: "bar"
+    }
+  }
+  property {
+    name: "num"
+    value {
+      int64Value: 5
+    }
+  }
+}
+entity {
+  key {
+    app: "testapp"
+    path {
+      Element {
+        type: "wtype"
+        name: "b"
+      }
+    }
+  }
+  entity_group {
+    Element {
+      type: "wtype"
+      name: "b"
+    }
+  }
+  property {
+    name: "tags"
+	value {
+      stringValue: "foo"
+    }
+  }
+  property {
+    name: "tags"
+    value {
+      stringValue: "baz"
+    }
+  }
+  property {
+    name: "num"
+    value {
+      int64Value: 3
     }
   }
 }
