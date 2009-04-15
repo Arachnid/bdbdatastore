@@ -7,6 +7,6 @@ import "api_base.proto";
 message PropertyIndexKey {
   required bytes kind = 1;
   required bytes name = 2;
-  required com.google.appengine.entity.PropertyValue value = 3;
+  optional com.google.appengine.entity.PropertyValue value = 3;
 }
  

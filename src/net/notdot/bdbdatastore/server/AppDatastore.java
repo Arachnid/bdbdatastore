@@ -7,15 +7,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import net.notdot.bdbdatastore.Indexing;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.appengine.datastore_v3.DatastoreV3;
 import com.google.appengine.datastore_v3.DatastoreV3.Query;
 import com.google.appengine.entity.Entity;
 import com.google.appengine.entity.Entity.EntityProto;
 import com.google.appengine.entity.Entity.Path;
 import com.google.appengine.entity.Entity.Property;
 import com.google.appengine.entity.Entity.Reference;
+import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.sleepycat.je.Cursor;
 import com.sleepycat.je.Database;
@@ -179,16 +183,19 @@ public class AppDatastore {
 	}
 
 	public DatastoreResultSet executeQuery(Query request) throws DatabaseException {
-		DatastoreResultSet ret = getEntityQueryPlan(request);
+		List<FilterSpec> filters = FilterSpec.FromQuery(request);
+		Collections.sort(filters, FilterTypeComparator.instance);
+		
+		DatastoreResultSet ret = getEntityQueryPlan(request, filters);
 		if(ret != null)
 			return ret;
-		ret = getAncestorQueryPlan(request);
+		ret = getAncestorQueryPlan(request, filters);
 		if(ret != null)
 			return ret;
-		ret = getSinglePropertyQueryPlan(request);
+		ret = getSinglePropertyQueryPlan(request, filters);
 		if(ret != null)
 			return ret;
-		ret = getMergeJoinQueryPlan(request);
+		ret = getMergeJoinQueryPlan(request, filters);
 		if(ret != null)
 			return ret;
 		//TODO: Handle running out of query plans
@@ -196,20 +203,42 @@ public class AppDatastore {
 	}
 
 	/* Attempts to generate a merge join multiple-equality query. */
-	private DatastoreResultSet getMergeJoinQueryPlan(Query request) {
+	private DatastoreResultSet getMergeJoinQueryPlan(Query request, List<FilterSpec> filters) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	/* Attempts to generate a query on a single-property index. */
-	private DatastoreResultSet getSinglePropertyQueryPlan(Query request) {
+	private DatastoreResultSet getSinglePropertyQueryPlan(Query request, List<FilterSpec> filters) {
 		if(request.hasAncestor() || request.getOrderCount() > 1)
 			return null;
 		
+		// Find the property
+		ByteString propname;
+		Indexing.PropertyIndexKey.Builder startkey = Indexing.PropertyIndexKey.newBuilder()
+				.setKind(request.getKind());
+		if(filters.size() > 0) {
+			propname = filters.get(0).getName();
+		} else if(request.getOrderCount() > 0) {
+			propname = request.getOrder(0).getProperty();
+		} else {
+			return null;
+		}
+		startkey.setName(propname);
+		
+		// Check it's the only one
+		for(FilterSpec filter : filters) {
+			if(!filter.getName().equals(propname))
+				return null;
+			//TODO: Continue from here.
+		}
+		for(DatastoreV3.Query.Order order : request.getOrderList())
+			if(!order.getProperty().equals(propname))
+				return null;
 	}
 
 	/* Attempts to generate a query by ancestor and entity */
-	private DatastoreResultSet getAncestorQueryPlan(Query request) throws DatabaseException {
+	private DatastoreResultSet getAncestorQueryPlan(Query request, List<FilterSpec> filters) throws DatabaseException {
 		//TODO: Explicitly handle __key__ sort order
 		if(!request.hasAncestor() || request.getFilterCount() > 0 || request.getOrderCount() > 0)
 			return null;
@@ -220,7 +249,7 @@ public class AppDatastore {
 	}
 
 	/* Attempts to generate a query plan for a scan by entity only */
-	private DatastoreResultSet getEntityQueryPlan(Query request) throws DatabaseException {
+	private DatastoreResultSet getEntityQueryPlan(Query request, List<FilterSpec> filters) throws DatabaseException {
 		//TODO: Handle __key__ sort order and filter specifications.
 		if(request.hasAncestor() || request.getFilterCount() > 0 || request.getOrderCount() > 0)
 			return null;

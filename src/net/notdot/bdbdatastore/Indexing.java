@@ -44,7 +44,7 @@ public final class Indexing {
     public boolean hasName() { return hasName; }
     public com.google.protobuf.ByteString getName() { return name_; }
     
-    // required .com.google.appengine.entity.PropertyValue value = 3;
+    // optional .com.google.appengine.entity.PropertyValue value = 3;
     private boolean hasValue;
     private com.google.appengine.entity.Entity.PropertyValue value_ = com.google.appengine.entity.Entity.PropertyValue.getDefaultInstance();
     public boolean hasValue() { return hasValue; }
@@ -196,7 +196,7 @@ public final class Indexing {
         return this;
       }
       
-      // required .com.google.appengine.entity.PropertyValue value = 3;
+      // optional .com.google.appengine.entity.PropertyValue value = 3;
       public boolean hasValue() {
         return result.hasValue();
       }
@@ -253,7 +253,7 @@ public final class Indexing {
       "\n\016indexing.proto\022\027net.notdot.bdbdatastor" +
       "e\032\014entity.proto\032\016api_base.proto\"i\n\020Prope" +
       "rtyIndexKey\022\014\n\004kind\030\001 \002(\014\022\014\n\004name\030\002 \002(\014\022" +
-      "9\n\005value\030\003 \002(\0132*.com.google.appengine.en" +
+      "9\n\005value\030\003 \001(\0132*.com.google.appengine.en" +
       "tity.PropertyValue";
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
