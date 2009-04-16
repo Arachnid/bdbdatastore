@@ -77,9 +77,22 @@ public class DatastoreService extends
 	}
 	
 	protected Transaction getTransaction(DatastoreV3.Transaction handle, AppDatastore ds) {
-		if(handle == null || !handle.hasHandle())
+		return getTransaction(handle, ds, false);
+	}
+	
+	protected Transaction getTransaction(DatastoreV3.Transaction handle, AppDatastore ds, boolean createImplicitTx) {
+		if(handle == null || !handle.hasHandle()) {
 			// No handle - not in a transaction
+			if(createImplicitTx) {
+				try {
+					return ds.newTransaction();
+				} catch(DatabaseException ex) {
+					logger.error("Unable to create implicit transaction", ex);
+				}
+			}
 			return null;
+		}
+		
 		Transaction ret = transactions.get(handle);
 		if(ret == null) {
 			synchronized(transactions) {
@@ -100,6 +113,26 @@ public class DatastoreService extends
 			}
 		}
 		return ret;
+	}
+	
+	protected void commitImplicitTransaction(DatastoreV3.Transaction handle, Transaction tx) {
+		if((handle == null || !handle.hasHandle()) && tx != null) {
+			try {
+				tx.commit();
+			} catch(DatabaseException ex) {
+				throw new RpcFailedError(ex, DatastoreV3.Error.ErrorCode.INTERNAL_ERROR.getNumber());
+			}
+		}
+	}
+
+	protected void rollbackImplicitTransaction(DatastoreV3.Transaction handle, Transaction tx) {
+		if((handle == null || !handle.hasHandle()) && tx != null) {
+			try {
+				tx.abort();
+			} catch(DatabaseException ex) {
+				throw new RpcFailedError(ex, DatastoreV3.Error.ErrorCode.INTERNAL_ERROR.getNumber());
+			}
+		}
 	}
 
 	@Override
@@ -164,19 +197,23 @@ public class DatastoreService extends
 		String app_id = request.getKey(0).getApp();
 		AppDatastore ds = this.datastore.getAppDatastore(app_id);
 
+		Transaction tx = null;
 		try {
-			Transaction tx = this.getTransaction(request.getTransaction(), ds);
+			tx = this.getTransaction(request.getTransaction(), ds, true);
 			for(Reference ref : request.getKeyList()) {
 				if(!ref.getApp().equals(app_id))
 					throw new RpcFailedError("All entities must have the same app_id",
 							DatastoreV3.Error.ErrorCode.BAD_REQUEST.getNumber());
 				ds.delete(ref, tx);
 			}
+			this.commitImplicitTransaction(request.getTransaction(), tx);
 			done.run(VoidProto.getDefaultInstance());
 		} catch(DeadlockException ex) {
+			this.rollbackImplicitTransaction(request.getTransaction(), tx);
 			throw new RpcFailedError("Operation was terminated to resolve a deadlock.",
 					DatastoreV3.Error.ErrorCode.CONCURRENT_TRANSACTION.getNumber());
 		} catch(DatabaseException ex) {
+			this.rollbackImplicitTransaction(request.getTransaction(), tx);
 			throw new RpcFailedError(ex, DatastoreV3.Error.ErrorCode.INTERNAL_ERROR.getNumber());
 		}
 	}
@@ -296,8 +333,9 @@ public class DatastoreService extends
 		String app_id = request.getEntity(0).getKey().getApp();
 		AppDatastore ds = this.datastore.getAppDatastore(app_id);
 		
+		Transaction tx = null;
 		try {
-			Transaction tx = this.getTransaction(request.getTransaction(), ds);
+			tx = this.getTransaction(request.getTransaction(), ds, true);
 			for(EntityProto ent : request.getEntityList()) {
 				if(!ent.getKey().getApp().equals(app_id)) {
 					throw new RpcFailedError("All entities must have the same app_id",
@@ -305,11 +343,14 @@ public class DatastoreService extends
 				}
 				response.addKey(ds.put(ent, tx));
 			}
+			this.commitImplicitTransaction(request.getTransaction(), tx);
 			done.run(response.build());
 		} catch(DeadlockException ex) {
+			this.rollbackImplicitTransaction(request.getTransaction(), tx);
 			throw new RpcFailedError("Operation was terminated to resolve a deadlock.",
 					DatastoreV3.Error.ErrorCode.CONCURRENT_TRANSACTION.getNumber());
 		} catch(DatabaseException ex) {
+			this.rollbackImplicitTransaction(request.getTransaction(), tx);
 			throw new RpcFailedError(ex, DatastoreV3.Error.ErrorCode.INTERNAL_ERROR.getNumber());
 		}
 	}
