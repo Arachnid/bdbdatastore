@@ -91,7 +91,7 @@ public class AppDatastore {
 		secondconfig.setAllowCreate(true);
 		secondconfig.setAllowPopulate(true);
 		secondconfig.setBtreeComparator(SerializedPropertyIndexKeyComparator.class);
-		secondconfig.setDuplicateComparator(SerializedReferenceComparator.class);
+		//secondconfig.setDuplicateComparator(SerializedReferenceComparator.class);
 		secondconfig.setMultiKeyCreator(new SinglePropertyIndexer());
 		secondconfig.setSortedDuplicates(true);
 		secondconfig.setTransactional(true);
@@ -209,7 +209,7 @@ public class AppDatastore {
 	}
 
 	/* Attempts to generate a query on a single-property index. */
-	private DatastoreResultSet getSinglePropertyQueryPlan(Query request, List<FilterSpec> filters) {
+	private DatastoreResultSet getSinglePropertyQueryPlan(Query request, List<FilterSpec> filters) throws DatabaseException {
 		if(request.hasAncestor() || request.getOrderCount() > 1)
 			return null;
 		
@@ -217,6 +217,7 @@ public class AppDatastore {
 		ByteString propname;
 		Indexing.PropertyIndexKey.Builder startkey = Indexing.PropertyIndexKey.newBuilder()
 				.setKind(request.getKind());
+		boolean exclusiveMin = false;
 		if(filters.size() > 0) {
 			propname = filters.get(0).getName();
 		} else if(request.getOrderCount() > 0) {
@@ -230,11 +231,31 @@ public class AppDatastore {
 		for(FilterSpec filter : filters) {
 			if(!filter.getName().equals(propname))
 				return null;
-			//TODO: Continue from here.
+			switch(filter.getOperator()) {
+			case 1: // Less than
+			case 2: // Less than or equal
+				break;
+			case 3: // Greater than
+				if(!startkey.hasValue() || PropertyValueComparator.instance.compare(startkey.getValue(), filter.getValue()) < 0) {
+					startkey.setValue(filter.getValue());
+					exclusiveMin = true;
+				}
+				break;
+			case 4: // Greater than or equal
+			case 5: // Equal
+				if(!startkey.hasValue() || PropertyValueComparator.instance.compare(startkey.getValue(), filter.getValue()) <= 0) {
+					startkey.setValue(filter.getValue());
+					exclusiveMin = false;
+				}
+				break;
+			}
 		}
 		for(DatastoreV3.Query.Order order : request.getOrderList())
 			if(!order.getProperty().equals(propname))
 				return null;
+		
+		Cursor cursor = this.entities_by_property.openCursor(null, null);
+		return new DatastoreResultSet(cursor, startkey.build(), exclusiveMin, request);
 	}
 
 	/* Attempts to generate a query by ancestor and entity */
@@ -245,7 +266,7 @@ public class AppDatastore {
 		
 		Cursor cursor = this.entities.openCursor(null, null);
 		// The start key is the specified ancestor
-		return new DatastoreResultSet(cursor, request.getAncestor(), request);
+		return new DatastoreResultSet(cursor, request.getAncestor(), false, request);
 	}
 
 	/* Attempts to generate a query plan for a scan by entity only */
@@ -261,6 +282,6 @@ public class AppDatastore {
 				.setPath(Entity.Path.newBuilder()
 						.addElement(Entity.Path.Element.newBuilder()
 								.setType(request.getKind()))).build();
-		return new DatastoreResultSet(cursor, startKey, request);
+		return new DatastoreResultSet(cursor, startKey, false, request);
 	}
 }

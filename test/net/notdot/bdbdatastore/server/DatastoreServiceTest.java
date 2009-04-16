@@ -6,7 +6,11 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
+import net.notdot.bdbdatastore.Indexing;
 import net.notdot.protorpc.ProtoRpcController;
 
 import org.junit.After;
@@ -25,6 +29,8 @@ import com.google.protobuf.TextFormat.ParseException;
 import com.sleepycat.je.Cursor;
 import com.sleepycat.je.DatabaseEntry;
 import com.sleepycat.je.DatabaseException;
+import com.sleepycat.je.OperationStatus;
+import com.sleepycat.je.SecondaryCursor;
 
 public class DatastoreServiceTest {
 	protected class TestRpcCallback<T> implements RpcCallback<T> {
@@ -400,5 +406,56 @@ public class DatastoreServiceTest {
 		assertEquals(dataset_put.getEntity(4), query_done.getValue().getResult(0));
 		assertEquals(dataset_put.getEntity(5), query_done.getValue().getResult(1));
 		assertEquals(dataset_put.getEntity(7), query_done.getValue().getResult(2));
+	}
+	
+	@Test
+	public void testSinglePropertyQuery() throws ParseException, FileNotFoundException, IOException {
+		loadCorpus();
+		
+		String[] fields = new String[] {
+			"tags",
+			"num"
+		};
+		int[] operators = new int[] {
+			DatastoreV3.Query.Filter.Operator.EQUAL.getNumber(),
+			DatastoreV3.Query.Filter.Operator.GREATER_THAN.getNumber()
+		};
+		Entity.PropertyValue[] values = new Entity.PropertyValue[] {
+			Entity.PropertyValue.newBuilder().setStringValue(ByteString.copyFromUtf8("foo")).build(),
+			Entity.PropertyValue.newBuilder().setInt64Value(3).build()
+		};
+		String[][] keyNames = new String[][] {
+			new String[] { "a", "b" },
+			new String[] { "a", "d" }
+		};
+		
+		for(int i = 0; i < operators.length; i++) {
+			RpcController controller = new ProtoRpcController();
+			DatastoreV3.Query query = DatastoreV3.Query.newBuilder()
+				.setApp("testapp")
+				.setKind(ByteString.copyFromUtf8("wtype"))
+				.addFilter(DatastoreV3.Query.Filter.newBuilder()
+					.setOp(operators[i])
+					.addProperty(Entity.Property.newBuilder()
+						.setName(ByteString.copyFromUtf8(fields[i]))
+						.setValue(values[i]))).build();
+			TestRpcCallback<DatastoreV3.QueryResult> done = new TestRpcCallback<DatastoreV3.QueryResult>();
+			service.runQuery(controller, query, done);
+			assertTrue(done.isCalled());
+			
+			DatastoreV3.NextRequest next = DatastoreV3.NextRequest.newBuilder()
+				.setCursor(done.getValue().getCursor())
+				.setCount(10).build();
+			controller = new ProtoRpcController();
+			done = new TestRpcCallback<DatastoreV3.QueryResult>();
+			service.next(controller, next, done);
+			assertTrue(done.isCalled());
+			
+			assertEquals(keyNames[i].length, done.getValue().getResultCount());
+			Set<String> keySet = new HashSet<String>(Arrays.asList(keyNames[i]));
+			for(Entity.EntityProto entity : done.getValue().getResultList()) {
+				assertTrue(keySet.contains(entity.getKey().getPath().getElement(0).getName().toStringUtf8()));
+			}
+		}
 	}
 }

@@ -1,6 +1,7 @@
 package net.notdot.bdbdatastore.server;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -22,14 +23,16 @@ public class DatastoreResultSet {
 
 	protected Cursor cursor;
 	protected Message startKey;
+	protected boolean exclusiveMin;
 	protected DatastoreV3.Query query;
 	protected boolean started = false;
 	protected int remaining = -1;
 	protected List<FilterSpec> filters;
 
-	public DatastoreResultSet(Cursor cur, Message startKey, DatastoreV3.Query query) throws DatabaseException {
+	public DatastoreResultSet(Cursor cur, Message startKey, boolean exclusiveMin, DatastoreV3.Query query) throws DatabaseException {
 		this.cursor = cur;
 		this.startKey = startKey;
+		this.exclusiveMin = exclusiveMin;
 		this.query = query;
 		this.filters = FilterSpec.FromQuery(query);
 		Collections.sort(this.filters);
@@ -105,23 +108,23 @@ public class DatastoreResultSet {
 					switch(current.operator) {
 					case 1: // Less than
 						if(filtercmp >= 0)
-							return null;
+							continue;
 						break;
 					case 2: // Less than or equal
 						if(filtercmp > 0)
-							return null;
+							continue;
 						break;
 					case 3: // Greater than
 						if(filtercmp <= 0)
-							return null;
+							continue;
 						break;
 					case 4: // Greater than or equal
 						if(filtercmp < 0)
-							return null;
+							continue;
 						break;
 					case 5: // Equal
 						if(filtercmp != 0)
-							return null;
+							continue;
 						break;
 					}
 					if(!iter.hasNext())
@@ -170,13 +173,18 @@ public class DatastoreResultSet {
 		if(started) {
 			status = cursor.getNext(key, data, null);
 		} else {
-			key.setData(this.startKey.toByteArray());
+			byte[] startKeyBytes = this.startKey.toByteArray();
+			key.setData(startKeyBytes);
 			status = cursor.getSearchKeyRange(key, data, null);
-			started = true;
+			if(status == OperationStatus.SUCCESS && exclusiveMin && Arrays.equals(startKeyBytes, key.getData())) {
+				// First key and the minimum is exclusive - fetch the next one
+				status = cursor.getNextNoDup(key, data, null);
+			}
 		}
 		
 		if(status == OperationStatus.SUCCESS) {
 			this.remaining--;
+			this.started = true;
 			return true;
 		} else if(status == OperationStatus.NOTFOUND) {
 			return false;

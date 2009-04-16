@@ -283,3 +283,49 @@ entity {
     }
   }
 }
+entity {
+  key {
+    app: "testapp"
+    path {
+      Element {
+        type: "wtype"
+        name: "c"
+      }
+    }
+  }
+  entity_group {
+    Element {
+      type: "wtype"
+      name: "c"
+    }
+  }
+  property {
+    name: "num"
+    value {
+      int64Value: 3
+    }
+  }
+}
+entity {
+  key {
+    app: "testapp"
+    path {
+      Element {
+        type: "wtype"
+        name: "d"
+      }
+    }
+  }
+  entity_group {
+    Element {
+      type: "wtype"
+      name: "d"
+    }
+  }
+  property {
+    name: "num"
+    value {
+      int64Value: 10
+    }
+  }
+}

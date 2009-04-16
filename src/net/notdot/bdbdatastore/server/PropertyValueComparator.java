@@ -48,7 +48,6 @@ public class PropertyValueComparator implements Comparator<Entity.PropertyValue>
 		return 1;
 	}
 
-	
 	public int compare(Entity.PropertyValue p1, Entity.PropertyValue p2) {
 		int ret;
 		int p1type = this.getValueType(p1);
