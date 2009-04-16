@@ -465,4 +465,72 @@ public class DatastoreServiceTest {
 			}
 		}
 	}
+	
+	@Test
+	public void testSinglePropertyRange() throws ParseException, FileNotFoundException, IOException {
+		// Tests that a range query on a single property works.
+		loadCorpus();
+		
+		RpcController controller = new ProtoRpcController();
+		DatastoreV3.Query query = DatastoreV3.Query.newBuilder()
+			.setApp("testapp")
+			.setKind(ByteString.copyFromUtf8("wtype"))
+			.addFilter(DatastoreV3.Query.Filter.newBuilder()
+				.setOp(DatastoreV3.Query.Filter.Operator.GREATER_THAN.getNumber())
+				.addProperty(Entity.Property.newBuilder()
+					.setName(ByteString.copyFromUtf8("num"))
+					.setValue(Entity.PropertyValue.newBuilder().setInt64Value(3))))
+			.addFilter(DatastoreV3.Query.Filter.newBuilder()
+				.setOp(DatastoreV3.Query.Filter.Operator.LESS_THAN.getNumber())
+				.addProperty(Entity.Property.newBuilder()
+					.setName(ByteString.copyFromUtf8("num"))
+					.setValue(Entity.PropertyValue.newBuilder().setInt64Value(10))))
+			.addOrder(DatastoreV3.Query.Order.newBuilder().setProperty(ByteString.copyFromUtf8("num")))
+			.build();
+		TestRpcCallback<DatastoreV3.QueryResult> done = new TestRpcCallback<DatastoreV3.QueryResult>();
+		service.runQuery(controller, query, done);
+		assertTrue(done.isCalled());
+		
+		DatastoreV3.NextRequest next = DatastoreV3.NextRequest.newBuilder()
+			.setCursor(done.getValue().getCursor())
+			.setCount(10).build();
+		controller = new ProtoRpcController();
+		done = new TestRpcCallback<DatastoreV3.QueryResult>();
+		service.next(controller, next, done);
+		assertTrue(done.isCalled());
+		
+		assertEquals(1, done.getValue().getResultCount());
+		assertEquals("a", done.getValue().getResult(0).getKey().getPath().getElement(0).getName().toStringUtf8());
+	}
+
+
+	@Test
+	public void testSinglePropertySort() throws ParseException, FileNotFoundException, IOException {
+		// Tests that a sort query on a single property works.
+		loadCorpus();
+		
+		RpcController controller = new ProtoRpcController();
+		DatastoreV3.Query query = DatastoreV3.Query.newBuilder()
+			.setApp("testapp")
+			.setKind(ByteString.copyFromUtf8("wtype"))
+			.addOrder(DatastoreV3.Query.Order.newBuilder().setProperty(ByteString.copyFromUtf8("num")))
+			.build();
+		TestRpcCallback<DatastoreV3.QueryResult> done = new TestRpcCallback<DatastoreV3.QueryResult>();
+		service.runQuery(controller, query, done);
+		assertTrue(done.isCalled());
+		
+		DatastoreV3.NextRequest next = DatastoreV3.NextRequest.newBuilder()
+			.setCursor(done.getValue().getCursor())
+			.setCount(10).build();
+		controller = new ProtoRpcController();
+		done = new TestRpcCallback<DatastoreV3.QueryResult>();
+		service.next(controller, next, done);
+		assertTrue(done.isCalled());
+		
+		assertEquals(4, done.getValue().getResultCount());
+		assertEquals("b", done.getValue().getResult(0).getKey().getPath().getElement(0).getName().toStringUtf8());
+		assertEquals("c", done.getValue().getResult(1).getKey().getPath().getElement(0).getName().toStringUtf8());
+		assertEquals("a", done.getValue().getResult(2).getKey().getPath().getElement(0).getName().toStringUtf8());
+		assertEquals("d", done.getValue().getResult(3).getKey().getPath().getElement(0).getName().toStringUtf8());
+	}
 }
