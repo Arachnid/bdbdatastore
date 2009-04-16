@@ -2,28 +2,22 @@ package net.notdot.bdbdatastore.server;
 
 
 
-import java.util.Arrays;
-
 import com.google.appengine.entity.Entity;
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.Message;
 import com.sleepycat.je.Cursor;
 import com.sleepycat.je.DatabaseEntry;
 import com.sleepycat.je.DatabaseException;
+import com.sleepycat.je.JoinCursor;
 import com.sleepycat.je.OperationStatus;
 
-public class DatastoreResultSet extends AbstractDatastoreResultSet {
-	protected Cursor cursor;
-	protected Message startKey;
-	protected boolean exclusiveMin;
-	protected MessagePredicate predicate;
+public class JoinedDatastoreResultSet extends AbstractDatastoreResultSet {
+	protected JoinCursor cursor;
+	protected Cursor[] gc = null;
 	
-	public DatastoreResultSet(Cursor cur, Message startKey, boolean exclusiveMin, QuerySpec query, MessagePredicate predicate) throws DatabaseException {
+	public JoinedDatastoreResultSet(JoinCursor cur, QuerySpec query, Cursor[] gc) throws DatabaseException {
 		super(query);
 		this.cursor = cur;
-		this.startKey = startKey;
-		this.exclusiveMin = exclusiveMin;
-		this.predicate = predicate;
+		this.gc = gc;
 
 		if(query.getOffset() > 0)
 			this.skip(query.getOffset());
@@ -32,20 +26,8 @@ public class DatastoreResultSet extends AbstractDatastoreResultSet {
 	protected boolean getNextInternal(DatabaseEntry key, DatabaseEntry data) throws DatabaseException {
 		if(remaining == 0)
 			return false;
-
-		OperationStatus status;
-		if(started) {
-			status = cursor.getNext(key, data, null);
-		} else {
-			byte[] startKeyBytes = this.startKey.toByteArray();
-			key.setData(startKeyBytes);
-			status = cursor.getSearchKeyRange(key, data, null);
-			if(status == OperationStatus.SUCCESS && exclusiveMin && Arrays.equals(startKeyBytes, key.getData())) {
-				// First key and the minimum is exclusive - fetch the next one
-				status = cursor.getNextNoDup(key, data, null);
-			}
-		}
-
+		
+		OperationStatus status = cursor.getNext(key, data, null);
 		if(status == OperationStatus.SUCCESS) {
 			this.remaining--;
 			this.started = true;
@@ -66,12 +48,6 @@ public class DatastoreResultSet extends AbstractDatastoreResultSet {
 				return null;
 			
 			try {
-				if(this.predicate != null) {
-					// Deserialize the key
-					Message keyent = this.startKey.newBuilderForType().mergeFrom(key.getData()).build();
-					if(!this.predicate.evaluate(keyent))
-						return null;
-				}
 				return Entity.EntityProto.parseFrom(value.getData());
 			} catch(InvalidProtocolBufferException ex) {
 				//TODO: Make this message more helpful somehow.
@@ -82,5 +58,9 @@ public class DatastoreResultSet extends AbstractDatastoreResultSet {
 
 	public void close() throws DatabaseException {
 		this.cursor.close();
+		if(this.gc != null) {
+			for(Cursor cur : this.gc)
+				cur.close();
+		}
 	}
 }

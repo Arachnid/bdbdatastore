@@ -3,6 +3,10 @@ package net.notdot.bdbdatastore.server;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import net.notdot.protorpc.Disposable;
 import net.notdot.protorpc.RpcFailedError;
 
 import com.google.appengine.base.ApiBase;
@@ -34,14 +38,16 @@ import com.sleepycat.je.Transaction;
 
 public class DatastoreService extends
 		com.google.appengine.datastore_v3.DatastoreV3.DatastoreService
-		implements Service {
+		implements Service, Disposable {
+	final Logger logger = LoggerFactory.getLogger(AppDatastore.class);
+
 	protected Datastore datastore;
 	
 	protected long next_tx_id = 0;
 	protected Map<DatastoreV3.Transaction,Transaction> transactions = new HashMap<DatastoreV3.Transaction,Transaction>();
 	
 	protected long next_cursor_id = 0;
-	protected Map<DatastoreV3.Cursor,DatastoreResultSet> cursors = new HashMap<DatastoreV3.Cursor,DatastoreResultSet>();
+	protected Map<DatastoreV3.Cursor,AbstractDatastoreResultSet> cursors = new HashMap<DatastoreV3.Cursor,AbstractDatastoreResultSet>();
 	
 	public DatastoreService(Datastore ds) {
 		this.datastore = ds;
@@ -49,15 +55,25 @@ public class DatastoreService extends
 		
 	@Override
 	protected void finalize() throws Throwable {
+		this.close();
 		super.finalize();
-		
-		// Close any open cursors
-		for(DatastoreResultSet cursor : this.cursors.values())
-			cursor.close();
-
-		// Clean up any outstanding transactions
-		for(Transaction tx : this.transactions.values())
-			tx.abort();
+	}
+	
+	public void close() {
+		try {
+			// Close any open cursors
+			for(AbstractDatastoreResultSet cursor : this.cursors.values())
+				cursor.close();
+			this.cursors.clear();
+	
+			// Clean up any outstanding transactions
+			for(Transaction tx : this.transactions.values())
+				if(tx != null)
+					tx.abort();
+			this.transactions.clear();
+		} catch(DatabaseException ex) {
+			this.logger.error("Exception encountered while disposing DatastoreService", ex);
+		}
 	}
 	
 	protected Transaction getTransaction(DatastoreV3.Transaction handle, AppDatastore ds) {
@@ -157,7 +173,7 @@ public class DatastoreService extends
 	@Override
 	public void deleteCursor(RpcController controller, DatastoreV3.Cursor request,
 			RpcCallback<VoidProto> done) {
-		DatastoreResultSet cursor;
+		AbstractDatastoreResultSet cursor;
 		
 		synchronized(this.cursors) {
 			cursor = this.cursors.get(request);
@@ -242,7 +258,7 @@ public class DatastoreService extends
 			RpcCallback<QueryResult> done) {
 		QueryResult.Builder response = QueryResult.newBuilder();
 		
-		DatastoreResultSet cursor = this.cursors.get(request.getCursor());
+		AbstractDatastoreResultSet cursor = this.cursors.get(request.getCursor());
 		if(cursor == null)
 			throw new RpcFailedError("Invalid cursor", DatastoreV3.Error.ErrorCode.BAD_REQUEST.getNumber());
 		
@@ -314,7 +330,7 @@ public class DatastoreService extends
 		AppDatastore ds = this.datastore.getAppDatastore(app_id);
 		
 		try {
-			DatastoreResultSet results = ds.executeQuery(request);
+			AbstractDatastoreResultSet results = ds.executeQuery(request);
 			DatastoreV3.Cursor dscursor;
 			synchronized(this.cursors) {
 				dscursor = DatastoreV3.Cursor.newBuilder().setCursor(next_cursor_id++).build();

@@ -2,6 +2,7 @@ package net.notdot.bdbdatastore.server;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -20,6 +21,7 @@ import com.google.appengine.entity.Entity.Property;
 import com.google.appengine.entity.Entity.Reference;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Message;
 import com.sleepycat.je.Cursor;
 import com.sleepycat.je.Database;
 import com.sleepycat.je.DatabaseConfig;
@@ -28,6 +30,7 @@ import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.EnvironmentLockedException;
+import com.sleepycat.je.JoinCursor;
 import com.sleepycat.je.OperationStatus;
 import com.sleepycat.je.SecondaryConfig;
 import com.sleepycat.je.SecondaryDatabase;
@@ -90,7 +93,7 @@ public class AppDatastore {
 		secondconfig.setAllowCreate(true);
 		secondconfig.setAllowPopulate(true);
 		secondconfig.setBtreeComparator(SerializedPropertyIndexKeyComparator.class);
-		//secondconfig.setDuplicateComparator(SerializedReferenceComparator.class);
+		secondconfig.setDuplicateComparator(SerializedEntityKeyComparator.class);
 		secondconfig.setMultiKeyCreator(new SinglePropertyIndexer());
 		secondconfig.setSortedDuplicates(true);
 		secondconfig.setTransactional(true);
@@ -101,6 +104,7 @@ public class AppDatastore {
 		for(Sequence seq : this.sequence_cache.values())
 			seq.close();
 		sequences.close();
+		entities_by_property.close();
 		entities.close();
 		env.close();
 	}
@@ -187,10 +191,10 @@ public class AppDatastore {
 		}
 	}
 
-	public DatastoreResultSet executeQuery(Query request) throws DatabaseException {
+	public AbstractDatastoreResultSet executeQuery(Query request) throws DatabaseException {
 		QuerySpec query = new QuerySpec(request);
 		
-		DatastoreResultSet ret = getEntityQueryPlan(query);
+		AbstractDatastoreResultSet ret = getEntityQueryPlan(query);
 		if(ret != null)
 			return ret;
 		ret = getAncestorQueryPlan(query);
@@ -207,13 +211,47 @@ public class AppDatastore {
 	}
 
 	/* Attempts to generate a merge join multiple-equality query. */
-	private DatastoreResultSet getMergeJoinQueryPlan(QuerySpec query) {
-		// TODO Auto-generated method stub
-		return null;
+	private AbstractDatastoreResultSet getMergeJoinQueryPlan(QuerySpec query) throws DatabaseException {
+		if(query.hasAncestor())
+			return null;
+
+		// Check only equality filters are used
+		if(query.getFilters().get(query.getFilters().size() - 1).getOperator() != 5)
+			return null;
+		
+		// Check no sort orders are specified
+		// TODO: Handle explicit specification of __key__ sort order
+		if(query.getOrders().size() > 0)
+			return null;
+		
+		Entity.Index index = query.getIndex();
+		
+		// Upper bound is equal to lower bound, since there's no inequality filter
+		List<Entity.PropertyValue> values = new ArrayList<Entity.PropertyValue>(index.getPropertyCount());
+		query.getLowerBound(values);
+		if(values.size() != index.getPropertyCount())
+			return null;
+		
+		// Construct the required cursors
+		Cursor[] cursors = new Cursor[values.size()];
+		for(int i = 0; i < values.size(); i++) {
+			Indexing.PropertyIndexKey startKey = Indexing.PropertyIndexKey.newBuilder()
+				.setKind(index.getEntityType())
+				.setName(index.getProperty(i).getName())
+				.setValue(values.get(i))
+				.build();
+			cursors[i] = this.entities_by_property.openCursor(null, null);
+			getFirstResult(cursors[i], startKey, false);
+		}
+		
+		// Construct a join cursor
+		JoinCursor cursor = this.entities.join(cursors, null);
+		
+		return new JoinedDatastoreResultSet(cursor, query, cursors);
 	}
 	
 	/* Attempts to generate a query on a single-property index. */
-	private DatastoreResultSet getSinglePropertyQueryPlan(QuerySpec query) throws DatabaseException {
+	private AbstractDatastoreResultSet getSinglePropertyQueryPlan(QuerySpec query) throws DatabaseException {
 		if(query.hasAncestor())
 			return null;
 		
@@ -244,13 +282,13 @@ public class AppDatastore {
 		}
 		
 		Cursor cursor = this.entities_by_property.openCursor(null, null);
-		return new DatastoreResultSet(cursor, lowerBound.build(), exclusiveMin, query,
-			new PropertyIndexPredicate(upperBound.build(), exclusiveMax));
+		MessagePredicate predicate = new PropertyIndexPredicate(upperBound.build(), exclusiveMax);
+		return new DatastoreResultSet(cursor, lowerBound.build(), exclusiveMin, query, predicate);
 	}
 
 
 	/* Attempts to generate a query by ancestor and entity */
-	private DatastoreResultSet getAncestorQueryPlan(QuerySpec query) throws DatabaseException {
+	private AbstractDatastoreResultSet getAncestorQueryPlan(QuerySpec query) throws DatabaseException {
 		//TODO: Explicitly handle __key__ sort order
 		if(!query.hasAncestor() || query.getFilters().size() > 0 || query.getOrders().size() > 0)
 			return null;
@@ -260,18 +298,29 @@ public class AppDatastore {
 			.setKind(query.getKind())
 			.setPath(query.getAncestor().getPath())
 			.build();
-		return new DatastoreResultSet(cursor, startKey, false, query, new KeyPredicate(startKey));
+		MessagePredicate predicate = new KeyPredicate(startKey);
+		return new DatastoreResultSet(cursor, startKey, false, query, predicate);
 	}
 
 	/* Attempts to generate a query plan for a scan by entity only */
-	private DatastoreResultSet getEntityQueryPlan(QuerySpec query) throws DatabaseException {
+	private AbstractDatastoreResultSet getEntityQueryPlan(QuerySpec query) throws DatabaseException {
 		//TODO: Handle __key__ sort order and filter specifications.
 		if(query.hasAncestor() || query.getFilters().size() > 0 || query.getOrders().size() > 0)
 			return null;
 		
 		Cursor cursor = this.entities.openCursor(null, null);
-		// Create a key with just app and kind set.
 		Indexing.EntityKey startKey = Indexing.EntityKey.newBuilder().setKind(query.getKind()).build();
-		return new DatastoreResultSet(cursor, startKey, false, query, new KeyPredicate(startKey));
+		MessagePredicate predicate = new KeyPredicate(startKey);
+		return new DatastoreResultSet(cursor, startKey, false, query, predicate);
+	}
+
+	private void getFirstResult(Cursor cursor, Message startKey, boolean exclusiveMin) throws DatabaseException {
+		byte[] startKeyBytes = startKey.toByteArray();
+		DatabaseEntry key = new DatabaseEntry(startKeyBytes);
+		DatabaseEntry data = new DatabaseEntry();
+		OperationStatus status = cursor.getSearchKeyRange(key, data, null);
+		if(status == OperationStatus.SUCCESS && exclusiveMin && Arrays.equals(startKeyBytes, key.getData())) {
+			status = cursor.getNextNoDup(key, data, null);
+		}
 	}
 }

@@ -52,6 +52,13 @@ public class ProtoRpcHandler extends SimpleChannelHandler {
 		open_channels.add(e.getChannel());
 	}
 
+	@Override
+	public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
+			throws Exception {
+		if(service instanceof Disposable)
+			((Disposable)service).close();
+	}
+
 	public ProtoRpcHandler(Service s, ChannelGroup channels) {
 		this.service = s;
 		this.open_channels = channels;
