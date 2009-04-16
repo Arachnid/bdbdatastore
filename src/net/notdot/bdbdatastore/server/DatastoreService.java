@@ -131,8 +131,19 @@ public class DatastoreService extends
 	@Override
 	public void count(RpcController controller, Query request,
 			RpcCallback<Integer64Proto> done) {
-		// TODO Auto-generated method stub
-
+		String app_id = request.getApp();
+		AppDatastore ds = this.datastore.getAppDatastore(app_id);
+		
+		try {
+			AbstractDatastoreResultSet cursor = ds.executeQuery(request);
+			int i = 0;
+			while(cursor.getNext() != null)
+				i++;
+			done.run(ApiBase.Integer64Proto.newBuilder().setValue(i).build());
+			cursor.close();
+		} catch (DatabaseException ex) {
+			throw new RpcFailedError(ex, DatastoreV3.Error.ErrorCode.INTERNAL_ERROR.getNumber());
+		}		
 	}
 
 	@Override

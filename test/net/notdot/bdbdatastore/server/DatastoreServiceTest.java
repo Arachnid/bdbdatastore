@@ -600,4 +600,20 @@ public class DatastoreServiceTest {
 		assertEquals(0, done.getValue().getResultCount());
 		assertFalse(done.getValue().getMoreResults());
 	}
+	
+	@Test
+	public void testCount() throws ParseException, FileNotFoundException, IOException {
+		loadCorpus();
+		
+		RpcController controller = new ProtoRpcController();
+		DatastoreV3.Query query = DatastoreV3.Query.newBuilder()
+			.setApp("testapp")
+			.setKind(ByteString.copyFromUtf8("wtype"))
+			.addOrder(DatastoreV3.Query.Order.newBuilder().setProperty(ByteString.copyFromUtf8("num")))
+			.build();
+		TestRpcCallback<ApiBase.Integer64Proto> done = new TestRpcCallback<ApiBase.Integer64Proto>();
+		service.count(controller, query, done);
+		assertTrue(done.isCalled());
+		assertEquals(4, done.getValue().getValue());
+	}
 }
