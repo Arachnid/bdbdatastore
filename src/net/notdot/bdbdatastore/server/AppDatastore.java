@@ -12,7 +12,6 @@ import net.notdot.bdbdatastore.Indexing;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.appengine.datastore_v3.DatastoreV3;
 import com.google.appengine.datastore_v3.DatastoreV3.Query;
 import com.google.appengine.entity.Entity;
 import com.google.appengine.entity.Entity.EntityProto;
@@ -82,7 +81,7 @@ public class AppDatastore {
 		DatabaseConfig dbconfig = new DatabaseConfig();
 		dbconfig.setAllowCreate(true);
 		dbconfig.setTransactional(true);
-		dbconfig.setBtreeComparator(SerializedReferenceComparator.class);
+		dbconfig.setBtreeComparator(SerializedEntityKeyComparator.class);
 		entities = env.openDatabase(null, "entities", dbconfig);
 		
 		sequences = env.openDatabase(null, "sequences", dbconfig);
@@ -106,8 +105,14 @@ public class AppDatastore {
 		env.close();
 	}
 	
+	protected static Indexing.EntityKey toEntityKey(Reference ref) {
+		Entity.Path path = ref.getPath();
+		ByteString kind = path.getElement(path.getElementCount() - 1).getType();
+		return Indexing.EntityKey.newBuilder().setKind(kind).setPath(path).build();
+	}
+	
 	public EntityProto get(Reference ref, Transaction tx) throws DatabaseException {
-		DatabaseEntry key = new DatabaseEntry(ref.toByteArray());
+		DatabaseEntry key = new DatabaseEntry(toEntityKey(ref).toByteArray());
 		DatabaseEntry value = new DatabaseEntry();
 		OperationStatus status = entities.get(tx, key, value, null);
 		if(status == OperationStatus.SUCCESS) {
@@ -130,7 +135,7 @@ public class AppDatastore {
 					conf.setAllowCreate(true);
 					conf.setCacheSize(DatastoreServer.properties.getInt("datastore.sequence.cache_size", 20));
 					conf.setInitialValue(1);
-					seq = sequences.openSequence(null, new DatabaseEntry(ref.toByteArray()), conf);
+					seq = sequences.openSequence(null, new DatabaseEntry(toEntityKey(ref).toByteArray()), conf);
 					this.sequence_cache.put(ref, seq);
 				}
 			}
@@ -161,7 +166,7 @@ public class AppDatastore {
 			}
 		}
 		
-		DatabaseEntry key = new DatabaseEntry(ref.toByteArray());
+		DatabaseEntry key = new DatabaseEntry(toEntityKey(ref).toByteArray());
 		DatabaseEntry value = new DatabaseEntry(entity.toByteArray());
 		OperationStatus status = entities.put(tx, key, value);
 		if(status != OperationStatus.SUCCESS)
@@ -175,7 +180,7 @@ public class AppDatastore {
 	}
 
 	public void delete(Reference ref, Transaction tx) throws DatabaseException {
-		DatabaseEntry key = new DatabaseEntry(ref.toByteArray());
+		DatabaseEntry key = new DatabaseEntry(toEntityKey(ref).toByteArray());
 		OperationStatus status = entities.delete(tx, key);
 		if(status != OperationStatus.SUCCESS && status != OperationStatus.NOTFOUND) {
 			throw new DatabaseException(String.format("Failed to delete entity %s: delete returned %s", ref, status));
@@ -183,19 +188,18 @@ public class AppDatastore {
 	}
 
 	public DatastoreResultSet executeQuery(Query request) throws DatabaseException {
-		List<FilterSpec> filters = FilterSpec.FromQuery(request);
-		Collections.sort(filters, FilterTypeComparator.instance);
+		QuerySpec query = new QuerySpec(request);
 		
-		DatastoreResultSet ret = getEntityQueryPlan(request, filters);
+		DatastoreResultSet ret = getEntityQueryPlan(query);
 		if(ret != null)
 			return ret;
-		ret = getAncestorQueryPlan(request, filters);
+		ret = getAncestorQueryPlan(query);
 		if(ret != null)
 			return ret;
-		ret = getSinglePropertyQueryPlan(request, filters);
+		ret = getSinglePropertyQueryPlan(query);
 		if(ret != null)
 			return ret;
-		ret = getMergeJoinQueryPlan(request, filters);
+		ret = getMergeJoinQueryPlan(query);
 		if(ret != null)
 			return ret;
 		//TODO: Handle running out of query plans
@@ -203,85 +207,71 @@ public class AppDatastore {
 	}
 
 	/* Attempts to generate a merge join multiple-equality query. */
-	private DatastoreResultSet getMergeJoinQueryPlan(Query request, List<FilterSpec> filters) {
+	private DatastoreResultSet getMergeJoinQueryPlan(QuerySpec query) {
 		// TODO Auto-generated method stub
 		return null;
 	}
-
+	
 	/* Attempts to generate a query on a single-property index. */
-	private DatastoreResultSet getSinglePropertyQueryPlan(Query request, List<FilterSpec> filters) throws DatabaseException {
-		if(request.hasAncestor() || request.getOrderCount() > 1)
+	private DatastoreResultSet getSinglePropertyQueryPlan(QuerySpec query) throws DatabaseException {
+		if(query.hasAncestor())
 			return null;
 		
-		// Find the property
-		ByteString propname;
-		Indexing.PropertyIndexKey.Builder startkey = Indexing.PropertyIndexKey.newBuilder()
-				.setKind(request.getKind());
-		boolean exclusiveMin = false;
-		if(filters.size() > 0) {
-			propname = filters.get(0).getName();
-		} else if(request.getOrderCount() > 0) {
-			propname = request.getOrder(0).getProperty();
-		} else {
+		Entity.Index index = query.getIndex();
+		if(index.getPropertyCount() > 1)
+			return null;
+		
+		List<Entity.PropertyValue> values = new ArrayList<Entity.PropertyValue>(1);
+		Indexing.PropertyIndexKey.Builder lowerBound = Indexing.PropertyIndexKey.newBuilder()
+			.setKind(index.getEntityType())
+			.setName(index.getProperty(0).getName());
+		boolean exclusiveMin = query.getLowerBound(values);
+		if(values.size() == 1) {
+			lowerBound.setValue(values.get(0));
+		} else if(values.size() > 1) {
 			return null;
 		}
-		startkey.setName(propname);
 		
-		// Check it's the only one
-		for(FilterSpec filter : filters) {
-			if(!filter.getName().equals(propname))
-				return null;
-			switch(filter.getOperator()) {
-			case 1: // Less than
-			case 2: // Less than or equal
-				break;
-			case 3: // Greater than
-				if(!startkey.hasValue() || PropertyValueComparator.instance.compare(startkey.getValue(), filter.getValue()) < 0) {
-					startkey.setValue(filter.getValue());
-					exclusiveMin = true;
-				}
-				break;
-			case 4: // Greater than or equal
-			case 5: // Equal
-				if(!startkey.hasValue() || PropertyValueComparator.instance.compare(startkey.getValue(), filter.getValue()) <= 0) {
-					startkey.setValue(filter.getValue());
-					exclusiveMin = false;
-				}
-				break;
-			}
+		Indexing.PropertyIndexKey.Builder upperBound = Indexing.PropertyIndexKey.newBuilder()
+			.setKind(index.getEntityType())
+			.setName(index.getProperty(0).getName());
+		values.clear();
+		boolean exclusiveMax = query.getUpperBound(values);
+		if(values.size() == 1) {
+			upperBound.setValue(values.get(0));
+		} else if(values.size() > 1) {
+			return null;
 		}
-		for(DatastoreV3.Query.Order order : request.getOrderList())
-			if(!order.getProperty().equals(propname))
-				return null;
 		
 		Cursor cursor = this.entities_by_property.openCursor(null, null);
-		return new DatastoreResultSet(cursor, startkey.build(), exclusiveMin, request);
+		return new DatastoreResultSet(cursor, lowerBound.build(), exclusiveMin, query,
+			new PropertyIndexPredicate(upperBound.build(), exclusiveMax));
 	}
 
+
 	/* Attempts to generate a query by ancestor and entity */
-	private DatastoreResultSet getAncestorQueryPlan(Query request, List<FilterSpec> filters) throws DatabaseException {
+	private DatastoreResultSet getAncestorQueryPlan(QuerySpec query) throws DatabaseException {
 		//TODO: Explicitly handle __key__ sort order
-		if(!request.hasAncestor() || request.getFilterCount() > 0 || request.getOrderCount() > 0)
+		if(!query.hasAncestor() || query.getFilters().size() > 0 || query.getOrders().size() > 0)
 			return null;
 		
 		Cursor cursor = this.entities.openCursor(null, null);
-		// The start key is the specified ancestor
-		return new DatastoreResultSet(cursor, request.getAncestor(), false, request);
+		Indexing.EntityKey startKey = Indexing.EntityKey.newBuilder()
+			.setKind(query.getKind())
+			.setPath(query.getAncestor().getPath())
+			.build();
+		return new DatastoreResultSet(cursor, startKey, false, query, new KeyPredicate(startKey));
 	}
 
 	/* Attempts to generate a query plan for a scan by entity only */
-	private DatastoreResultSet getEntityQueryPlan(Query request, List<FilterSpec> filters) throws DatabaseException {
+	private DatastoreResultSet getEntityQueryPlan(QuerySpec query) throws DatabaseException {
 		//TODO: Handle __key__ sort order and filter specifications.
-		if(request.hasAncestor() || request.getFilterCount() > 0 || request.getOrderCount() > 0)
+		if(query.hasAncestor() || query.getFilters().size() > 0 || query.getOrders().size() > 0)
 			return null;
 		
 		Cursor cursor = this.entities.openCursor(null, null);
 		// Create a key with just app and kind set.
-		Entity.Reference startKey = Entity.Reference.newBuilder()
-				.setApp(request.getApp())
-				.setPath(Entity.Path.newBuilder()
-						.addElement(Entity.Path.Element.newBuilder()
-								.setType(request.getKind()))).build();
-		return new DatastoreResultSet(cursor, startKey, false, request);
+		Indexing.EntityKey startKey = Indexing.EntityKey.newBuilder().setKind(query.getKind()).build();
+		return new DatastoreResultSet(cursor, startKey, false, query, new KeyPredicate(startKey));
 	}
 }

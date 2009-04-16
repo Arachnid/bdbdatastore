@@ -1,17 +1,22 @@
 package net.notdot.bdbdatastore.server;
 
 import java.util.Comparator;
+import java.util.List;
+
+import net.notdot.bdbdatastore.Indexing;
 
 import com.google.appengine.entity.Entity;
 import com.google.appengine.entity.Entity.Path;
 import com.google.protobuf.ByteString;
 
-public class ReferenceComparator implements Comparator<Entity.Reference> {
-	public final static ReferenceComparator instance = new ReferenceComparator();
+public class EntityKeyComparator implements Comparator<Indexing.EntityKey> {
+	public final static EntityKeyComparator instance = new EntityKeyComparator();
 	
-	public static Entity.Reference toReference(Entity.PropertyValue.ReferenceValue refval) {
+	public static Indexing.EntityKey toEntityKey(Entity.PropertyValue.ReferenceValue refval) {
 		Entity.Path.Builder path = Entity.Path.newBuilder();
-		for(Entity.PropertyValue.ReferenceValue.PathElement pathel : refval.getPathElementList()) {
+		
+		List<Entity.PropertyValue.ReferenceValue.PathElement> elements = refval.getPathElementList();
+		for(Entity.PropertyValue.ReferenceValue.PathElement pathel : elements) {
 			Entity.Path.Element.Builder element = Entity.Path.Element.newBuilder();
 			element.setType(pathel.getType());
 			if(pathel.hasName())
@@ -21,7 +26,8 @@ public class ReferenceComparator implements Comparator<Entity.Reference> {
 			path.addElement(element);
 		}
 		
-		return Entity.Reference.newBuilder().setApp(refval.getApp()).setPath(path).build();
+		ByteString kind = elements.get(elements.size() - 1).getType();
+		return Indexing.EntityKey.newBuilder().setKind(kind).setPath(path).build();
 	}
 	
 	protected int compareElements(Entity.Path.Element e1, Entity.Path.Element e2) {
@@ -46,19 +52,12 @@ public class ReferenceComparator implements Comparator<Entity.Reference> {
 		}
 	}
 	
-	public int compare(Entity.Reference o1, Entity.Reference o2) {
-		// Compare App IDs
-		int ret = o1.getApp().compareTo(o2.getApp());
-		if(ret != 0)
-			return ret;
-		
+	public int compare(Indexing.EntityKey o1, Indexing.EntityKey o2) {
 		Entity.Path p1 = o1.getPath();
 		Entity.Path p2 = o2.getPath();
 		
-		// Compare types
-		ByteString p1type = p1.getElement(p1.getElementCount() - 1).getType();
-		ByteString p2type = p2.getElement(p2.getElementCount() - 1).getType();
-		ret = p1type.asReadOnlyByteBuffer().compareTo(p2type.asReadOnlyByteBuffer());
+		// Compare kinds
+		int ret = o1.getKind().asReadOnlyByteBuffer().compareTo(o2.getKind().asReadOnlyByteBuffer());
 		if(ret != 0)
 			return ret;
 		

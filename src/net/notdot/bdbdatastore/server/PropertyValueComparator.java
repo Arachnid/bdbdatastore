@@ -72,9 +72,9 @@ public class PropertyValueComparator implements Comparator<Entity.PropertyValue>
 		case 6: // User
 			return p1.getUserValue().getEmail().asReadOnlyByteBuffer().compareTo(p2.getUserValue().getEmail().asReadOnlyByteBuffer());
 		case 7: // Reference
-			return ReferenceComparator.instance.compare(
-					ReferenceComparator.toReference(p1.getReferenceValue()),
-					ReferenceComparator.toReference(p2.getReferenceValue()));
+			return EntityKeyComparator.instance.compare(
+					EntityKeyComparator.toEntityKey(p1.getReferenceValue()),
+					EntityKeyComparator.toEntityKey(p2.getReferenceValue()));
 		}
 		return 0;
 	}

@@ -36,7 +36,7 @@ public class QuerySpec {
 			this.limit = query.getLimit();
 	}
 	
-	public Entity.Index GetIndex() {
+	public Entity.Index getIndex() {
 		// TODO: Refactor this to support multiple possible indexes to satisfy the same query.
 		if(this.index == null) {
 			Entity.Index.Builder builder = Entity.Index.newBuilder();
@@ -76,18 +76,93 @@ public class QuerySpec {
 		return this.index;
 	}
 	
-	public boolean GetLowerBound(List<Entity.PropertyValue> lowerBound) {
+	public boolean getLowerBound(List<Entity.PropertyValue> lowerBound) {
 		boolean lowerExclusive = false;
-		Entity.PropertyValue current = null;
+		Entity.PropertyValue inequalityMin = null;
 		for(FilterSpec filter : this.filters) {
 			switch(filter.getOperator()) {
 			case 1: // Less than
 			case 2: // Less than or equal
 				break;
 			case 3: // Greater than
+				if(inequalityMin == null || PropertyValueComparator.instance.compare(filter.getValue(), inequalityMin) < 0) {
+					inequalityMin = filter.getValue();
+					lowerExclusive = true;
+				}
+				break;
 			case 4: // Greater than or equal
+				if(inequalityMin == null || PropertyValueComparator.instance.compare(filter.getValue(), inequalityMin) <= 0) {
+					inequalityMin = filter.getValue();
+					lowerExclusive = false;
+				}
+				break;
 			case 5: // Equal
+				lowerBound.add(filter.getValue());
 			}
 		}
+		if(inequalityMin != null)
+			lowerBound.add(inequalityMin);
+		return lowerExclusive;
+	}
+
+	public boolean getUpperBound(List<Entity.PropertyValue> upperBound) {
+		boolean upperExclusive = false;
+		Entity.PropertyValue inequalityMax = null;
+		for(FilterSpec filter : this.filters) {
+			switch(filter.getOperator()) {
+			case 1: // Less than
+				if(inequalityMax == null || PropertyValueComparator.instance.compare(filter.getValue(), inequalityMax) > 0) {
+					inequalityMax = filter.getValue();
+					upperExclusive = true;
+				}
+				break;
+			case 2: // Less than or equal
+				if(inequalityMax == null || PropertyValueComparator.instance.compare(filter.getValue(), inequalityMax) >= 0) {
+					inequalityMax = filter.getValue();
+					upperExclusive = false;
+				}
+				break;
+			case 3: // Greater than
+			case 4: // Greater than or equal
+				break;
+			case 5: // Equal
+				upperBound.add(filter.getValue());
+			}
+		}
+		if(inequalityMax != null)
+			upperBound.add(inequalityMax);
+		return upperExclusive;
+	}
+
+	public String getApp() {
+		return app;
+	}
+
+	public ByteString getKind() {
+		return kind;
+	}
+
+	public Entity.Reference getAncestor() {
+		return ancestor;
+	}
+	
+	public boolean hasAncestor() {
+		return ancestor != null;
+	}
+
+	public List<FilterSpec> getFilters() {
+		return filters;
+	}
+
+	public List<DatastoreV3.Query.Order> getOrders() {
+		return orders;
+	}
+
+	public int getOffset() {
+		return offset;
+	}
+
+	public int getLimit() {
+		return limit;
 	}
 }

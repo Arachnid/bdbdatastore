@@ -2,16 +2,13 @@ package net.notdot.bdbdatastore.server;
 
 import java.util.Comparator;
 
-import com.google.appengine.entity.Entity;
-
 import net.notdot.bdbdatastore.Indexing;
 import net.notdot.bdbdatastore.Indexing.PropertyIndexKey;
 
 public class PropertyIndexKeyComparator implements
 		Comparator<Indexing.PropertyIndexKey> {
 	public static final PropertyIndexKeyComparator instance = new PropertyIndexKeyComparator();
-	
-	@Override
+
 	public int compare(PropertyIndexKey arg0, PropertyIndexKey arg1) {
 		int ret = arg0.getKind().asReadOnlyByteBuffer().compareTo(arg1.getKind().asReadOnlyByteBuffer());
 		if(ret != 0)
@@ -25,4 +22,5 @@ public class PropertyIndexKeyComparator implements
 			return 1;
 		return PropertyValueComparator.instance.compare(arg0.getValue(), arg1.getValue());
 	}
+	
 }

@@ -18,7 +18,6 @@ import com.sleepycat.je.SecondaryMultiKeyCreator;
 public class SinglePropertyIndexer implements SecondaryMultiKeyCreator {
 	static final Logger logger = LoggerFactory.getLogger(SinglePropertyIndexer.class);
 
-	@Override
 	public void createSecondaryKeys(SecondaryDatabase db, DatabaseEntry key,
 			DatabaseEntry data, Set<DatabaseEntry> results)
 			throws DatabaseException {

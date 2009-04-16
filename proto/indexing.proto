@@ -3,6 +3,12 @@ package net.notdot.bdbdatastore;
 import "entity.proto";
 import "api_base.proto";
 
+// Index key for the Entities table
+message EntityKey {
+  required bytes kind = 1;
+  optional com.google.appengine.entity.Path path = 2;
+}
+
 // Index key for single property indices
 message PropertyIndexKey {
   required bytes kind = 1;

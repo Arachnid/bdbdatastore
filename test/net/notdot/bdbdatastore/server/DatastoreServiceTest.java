@@ -29,8 +29,6 @@ import com.google.protobuf.TextFormat.ParseException;
 import com.sleepycat.je.Cursor;
 import com.sleepycat.je.DatabaseEntry;
 import com.sleepycat.je.DatabaseException;
-import com.sleepycat.je.OperationStatus;
-import com.sleepycat.je.SecondaryCursor;
 
 public class DatastoreServiceTest {
 	protected class TestRpcCallback<T> implements RpcCallback<T> {
@@ -307,15 +305,11 @@ public class DatastoreServiceTest {
 	
 	@Test
 	public void testKeyComparer() {
-		Entity.Reference startKey = Entity.Reference.newBuilder()
-		.setApp("testapp")
-		.setPath(Entity.Path.newBuilder()
-				.addElement(Entity.Path.Element.newBuilder()
-						.setType(ByteString.copyFromUtf8("testtype")))).build();
-		assertTrue(ReferenceComparator.instance.compare(startKey, dataset_put.getEntity(0).getKey()) > 0);
-		assertTrue(ReferenceComparator.instance.compare(startKey, dataset_put.getEntity(1).getKey()) < 0);
-		assertTrue(ReferenceComparator.instance.compare(startKey, dataset_put.getEntity(2).getKey()) < 0);
-		assertTrue(ReferenceComparator.instance.compare(startKey, dataset_put.getEntity(3).getKey()) < 0);
+		Indexing.EntityKey startKey = Indexing.EntityKey.newBuilder().setKind(ByteString.copyFromUtf8("testtype")).build();
+		assertTrue(EntityKeyComparator.instance.compare(startKey, AppDatastore.toEntityKey(dataset_put.getEntity(0).getKey())) > 0);
+		assertTrue(EntityKeyComparator.instance.compare(startKey, AppDatastore.toEntityKey(dataset_put.getEntity(1).getKey())) < 0);
+		assertTrue(EntityKeyComparator.instance.compare(startKey, AppDatastore.toEntityKey(dataset_put.getEntity(2).getKey())) < 0);
+		assertTrue(EntityKeyComparator.instance.compare(startKey, AppDatastore.toEntityKey(dataset_put.getEntity(3).getKey())) < 0);
 	}
 	
 	@Test
@@ -327,12 +321,12 @@ public class DatastoreServiceTest {
 		DatabaseEntry data = new DatabaseEntry();
 		
 		cur.getFirst(key, data, null);
-		assertEquals(dataset_put.getEntity(0).getKey(), Entity.Reference.parseFrom(key.getData()));
+		assertEquals(AppDatastore.toEntityKey(dataset_put.getEntity(0).getKey()), Indexing.EntityKey.parseFrom(key.getData()));
 		assertEquals(dataset_put.getEntity(0), Entity.EntityProto.parseFrom(data.getData()));
 		
 		for(int i = 1; i < 4; i++) {
 			cur.getNext(key, data, null);
-			assertEquals(dataset_put.getEntity(i).getKey(), Entity.Reference.parseFrom(key.getData()));
+			assertEquals(AppDatastore.toEntityKey(dataset_put.getEntity(i).getKey()), Indexing.EntityKey.parseFrom(key.getData()));
 			assertEquals(dataset_put.getEntity(i), Entity.EntityProto.parseFrom(data.getData()));
 		}
 	}
@@ -414,19 +408,31 @@ public class DatastoreServiceTest {
 		
 		String[] fields = new String[] {
 			"tags",
+			"num",
+			"num",
+			"num",
 			"num"
 		};
 		int[] operators = new int[] {
 			DatastoreV3.Query.Filter.Operator.EQUAL.getNumber(),
-			DatastoreV3.Query.Filter.Operator.GREATER_THAN.getNumber()
+			DatastoreV3.Query.Filter.Operator.GREATER_THAN.getNumber(),
+			DatastoreV3.Query.Filter.Operator.GREATER_THAN_OR_EQUAL.getNumber(),
+			DatastoreV3.Query.Filter.Operator.LESS_THAN.getNumber(),
+			DatastoreV3.Query.Filter.Operator.LESS_THAN_OR_EQUAL.getNumber()
 		};
 		Entity.PropertyValue[] values = new Entity.PropertyValue[] {
 			Entity.PropertyValue.newBuilder().setStringValue(ByteString.copyFromUtf8("foo")).build(),
-			Entity.PropertyValue.newBuilder().setInt64Value(3).build()
+			Entity.PropertyValue.newBuilder().setInt64Value(3).build(),
+			Entity.PropertyValue.newBuilder().setInt64Value(5).build(),
+			Entity.PropertyValue.newBuilder().setInt64Value(10).build(),
+			Entity.PropertyValue.newBuilder().setInt64Value(5).build()
 		};
 		String[][] keyNames = new String[][] {
 			new String[] { "a", "b" },
-			new String[] { "a", "d" }
+			new String[] { "a", "d" },
+			new String[] { "a", "d" },
+			new String[] { "a", "b", "c" },
+			new String[] { "a", "b", "c" }
 		};
 		
 		for(int i = 0; i < operators.length; i++) {
@@ -451,10 +457,11 @@ public class DatastoreServiceTest {
 			service.next(controller, next, done);
 			assertTrue(done.isCalled());
 			
-			assertEquals(keyNames[i].length, done.getValue().getResultCount());
+			assertEquals(String.format("i=%d", i), keyNames[i].length, done.getValue().getResultCount());
 			Set<String> keySet = new HashSet<String>(Arrays.asList(keyNames[i]));
 			for(Entity.EntityProto entity : done.getValue().getResultList()) {
-				assertTrue(keySet.contains(entity.getKey().getPath().getElement(0).getName().toStringUtf8()));
+				String name = entity.getKey().getPath().getElement(0).getName().toStringUtf8();
+				assertTrue(String.format("i=%d, key=%s", i, name), keySet.contains(name));
 			}
 		}
 	}

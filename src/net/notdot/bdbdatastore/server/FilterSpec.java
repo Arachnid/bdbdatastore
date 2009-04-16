@@ -29,17 +29,6 @@ public class FilterSpec implements Comparable<FilterSpec> {
 		return ret;
 	}
 	
-	@Override
-	public int compareTo(FilterSpec arg0) {
-		int ret = arg0.operator - operator; // Reversed so equality comes first
-		if(ret != 0)
-			return ret;
-		ret = name.asReadOnlyByteBuffer().compareTo(arg0.name.asReadOnlyByteBuffer());
-		if(ret != 0)
-			return ret;
-		return PropertyValueComparator.instance.compare(this.value, arg0.value);
-	}
-
 	public ByteString getName() {
 		return name;
 	}
@@ -50,5 +39,15 @@ public class FilterSpec implements Comparable<FilterSpec> {
 
 	public Entity.PropertyValue getValue() {
 		return value;
+	}
+
+	public int compareTo(FilterSpec o) {
+		int ret = o.operator - operator; // Reversed so equality comes first
+		if(ret != 0)
+			return ret;
+		ret = name.asReadOnlyByteBuffer().compareTo(o.name.asReadOnlyByteBuffer());
+		if(ret != 0)
+			return ret;
+		return PropertyValueComparator.instance.compare(this.value, o.value);
 	}
 }
