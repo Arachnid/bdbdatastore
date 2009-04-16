@@ -31,10 +31,10 @@ public class FilterSpec implements Comparable<FilterSpec> {
 	
 	@Override
 	public int compareTo(FilterSpec arg0) {
-		int ret = name.asReadOnlyByteBuffer().compareTo(arg0.name.asReadOnlyByteBuffer());
+		int ret = arg0.operator - operator; // Reversed so equality comes first
 		if(ret != 0)
 			return ret;
-		ret = operator - arg0.operator;
+		ret = name.asReadOnlyByteBuffer().compareTo(arg0.name.asReadOnlyByteBuffer());
 		if(ret != 0)
 			return ret;
 		return PropertyValueComparator.instance.compare(this.value, arg0.value);
