@@ -34,7 +34,7 @@ public class Datastore {
 				datastores.put(app_id, ret);
 				return ret;
 			} catch(DatabaseException ex) {
-				logger.error("Could not open datastore for app {}: {}", app_id, ex);
+				logger.error(String.format("Could not open datastore for app '%s'", app_id), ex);
 				throw new RpcFailedError(String.format("Unable to get datastore instance for app '%s'", app_id),
 						DatastoreV3.Error.ErrorCode.INTERNAL_ERROR.getNumber());
 			}
@@ -47,7 +47,7 @@ public class Datastore {
 				try {
 					entry.getValue().close();
 				} catch(DatabaseException ex) {
-					logger.error("Error shutting down datastore for app '{}': {}", entry.getKey(), ex);
+					logger.error(String.format("Error shutting down datastore for app '%s'", entry.getKey()), ex);
 				}
 			}
 		}
