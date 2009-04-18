@@ -723,5 +723,24 @@ public class DatastoreServiceTest {
 		
 		assertEquals(1, query_done.getValue().getResultCount());
 		assertEquals("a", query_done.getValue().getResult(0).getKey().getPath().getElement(0).getName().toStringUtf8());
+		
+		// Perform a query with one filter and one order
+		query = DatastoreV3.Query.newBuilder(query).clearFilter().addFilter(query.getFilter(0)).build();
+		
+		controller = new ProtoRpcController();
+		query_done = new TestRpcCallback<DatastoreV3.QueryResult>();
+		service.runQuery(controller, query, query_done);
+		assertTrue(query_done.isCalled());
+		
+		// Get the results
+		controller = new ProtoRpcController();
+		next = DatastoreV3.NextRequest.newBuilder()
+			.setCursor(query_done.getValue().getCursor())
+			.setCount(5).build();
+		query_done = new TestRpcCallback<DatastoreV3.QueryResult>();
+		service.next(controller, next, query_done);
+		assertTrue(query_done.isCalled());
+		
+		assertEquals(2, query_done.getValue().getResultCount());
 	}
 }
