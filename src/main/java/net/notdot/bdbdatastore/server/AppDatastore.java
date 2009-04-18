@@ -316,10 +316,11 @@ public class AppDatastore {
 		
 		// Construct a start key
 		List<Entity.PropertyValue> values = new ArrayList<Entity.PropertyValue>();
-		boolean exclusiveMin = query.getLowerBound(values);
+		boolean exclusiveMin = query.getBounds(idx, 1, values);
 		Indexing.CompositeIndexKey.Builder lowerBound = Indexing.CompositeIndexKey.newBuilder()
 			.addAllValue(values);
-		boolean exclusiveMax = query.getUpperBound(values);
+		values.clear();
+		boolean exclusiveMax = query.getBounds(idx, -1, values);
 		Indexing.CompositeIndexKey.Builder upperBound = Indexing.CompositeIndexKey.newBuilder()
 			.addAllValue(values);
 		
@@ -351,7 +352,7 @@ public class AppDatastore {
 		
 		// Upper bound is equal to lower bound, since there's no inequality filter
 		List<Entity.PropertyValue> values = new ArrayList<Entity.PropertyValue>(index.getPropertyCount());
-		query.getLowerBound(values);
+		query.getBounds(query.getIndex(), 1, values);
 		if(values.size() != index.getPropertyCount())
 			return null;
 		
@@ -386,7 +387,7 @@ public class AppDatastore {
 		Indexing.PropertyIndexKey.Builder lowerBound = Indexing.PropertyIndexKey.newBuilder()
 			.setKind(index.getEntityType())
 			.setName(index.getProperty(0).getName());
-		boolean exclusiveMin = query.getLowerBound(values);
+		boolean exclusiveMin = query.getBounds(query.getIndex(), 1, values);
 		if(values.size() == 1) {
 			lowerBound.setValue(values.get(0));
 		} else if(values.size() > 1) {
@@ -397,7 +398,7 @@ public class AppDatastore {
 			.setKind(index.getEntityType())
 			.setName(index.getProperty(0).getName());
 		values.clear();
-		boolean exclusiveMax = query.getUpperBound(values);
+		boolean exclusiveMax = query.getBounds(query.getIndex(), -1, values);
 		if(values.size() == 1) {
 			upperBound.setValue(values.get(0));
 		} else if(values.size() > 1) {

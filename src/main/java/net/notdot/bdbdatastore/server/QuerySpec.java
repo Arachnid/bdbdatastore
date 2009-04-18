@@ -2,6 +2,7 @@ package net.notdot.bdbdatastore.server;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
 import net.notdot.protorpc.RpcFailedError;
@@ -79,63 +80,52 @@ public class QuerySpec {
 		}
 		return this.index;
 	}
-	
-	public boolean getLowerBound(List<Entity.PropertyValue> lowerBound) {
-		boolean lowerExclusive = false;
-		Entity.PropertyValue inequalityMin = null;
-		for(FilterSpec filter : this.filters) {
-			switch(filter.getOperator()) {
-			case 1: // Less than
-			case 2: // Less than or equal
-				break;
-			case 3: // Greater than
-				if(inequalityMin == null || PropertyValueComparator.instance.compare(filter.getValue(), inequalityMin) < 0) {
-					inequalityMin = filter.getValue();
-					lowerExclusive = true;
-				}
-				break;
-			case 4: // Greater than or equal
-				if(inequalityMin == null || PropertyValueComparator.instance.compare(filter.getValue(), inequalityMin) <= 0) {
-					inequalityMin = filter.getValue();
-					lowerExclusive = false;
-				}
-				break;
-			case 5: // Equal
-				lowerBound.add(filter.getValue());
-			}
-		}
-		if(inequalityMin != null)
-			lowerBound.add(inequalityMin);
-		return lowerExclusive;
-	}
 
-	public boolean getUpperBound(List<Entity.PropertyValue> upperBound) {
-		boolean upperExclusive = false;
-		Entity.PropertyValue inequalityMax = null;
+	public boolean getBounds(Entity.Index idx, int direction, List<Entity.PropertyValue> bounds) {
+		boolean exclusiveBound = false;
+		Entity.PropertyValue inequalityBound = null;
+		Iterator<Entity.Index.Property> iter = idx.getPropertyList().iterator();
+		int currentDirection = 0;
+		ByteString currentProperty = null;
+		
 		for(FilterSpec filter : this.filters) {
+			if(currentProperty == null || !currentProperty.equals(filter.getName())) {
+				currentDirection = direction * (iter.next().getDirection()==Entity.Index.Property.Direction.ASCENDING?1:-1);
+				currentProperty = filter.getName();
+			}
+
 			switch(filter.getOperator()) {
 			case 1: // Less than
-				if(inequalityMax == null || PropertyValueComparator.instance.compare(filter.getValue(), inequalityMax) > 0) {
-					inequalityMax = filter.getValue();
-					upperExclusive = true;
+				if(currentDirection == -1 && (inequalityBound == null || PropertyValueComparator.instance.compare(filter.getValue(), inequalityBound) > 0)) {
+					inequalityBound = filter.getValue();
+					exclusiveBound = true;
 				}
 				break;
 			case 2: // Less than or equal
-				if(inequalityMax == null || PropertyValueComparator.instance.compare(filter.getValue(), inequalityMax) >= 0) {
-					inequalityMax = filter.getValue();
-					upperExclusive = false;
+				if(currentDirection == -1 && (inequalityBound == null || PropertyValueComparator.instance.compare(filter.getValue(), inequalityBound) >= 0)) {
+					inequalityBound = filter.getValue();
+					exclusiveBound = false;
 				}
 				break;
 			case 3: // Greater than
+				if(currentDirection == 1 && (inequalityBound == null || PropertyValueComparator.instance.compare(filter.getValue(), inequalityBound) < 0)) {
+					inequalityBound = filter.getValue();
+					exclusiveBound = true;
+				}
+				break;
 			case 4: // Greater than or equal
+				if(currentDirection == 1 && (inequalityBound == null || PropertyValueComparator.instance.compare(filter.getValue(), inequalityBound) <= 0)) {
+					inequalityBound = filter.getValue();
+					exclusiveBound = false;
+				}
 				break;
 			case 5: // Equal
-				upperBound.add(filter.getValue());
+				bounds.add(filter.getValue());
 			}
 		}
-		if(inequalityMax != null)
-			upperBound.add(inequalityMax);
-		return upperExclusive;
+		if(inequalityBound != null)
+			bounds.add(inequalityBound);
+		return exclusiveBound;
 	}
 
 	public String getApp() {

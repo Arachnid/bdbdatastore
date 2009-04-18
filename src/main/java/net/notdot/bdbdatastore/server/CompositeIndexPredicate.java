@@ -16,7 +16,7 @@ public class CompositeIndexPredicate implements MessagePredicate {
 		int[] directions = new int[idx.getPropertyCount()];
 		for(int i = 0; i < directions.length; i++)
 			directions[i] = (idx.getProperty(i).getDirection()==Direction.ASCENDING)?1:-1;
-		this.comparator = new CompositeIndexKeyComparator(directions, idx.hasAncestor());
+		this.comparator = new CompositeIndexKeyComparator(directions, idx.getAncestor());
 		this.upperBound = upperBound;
 		maxval = exclusiveMax?-1:0;
 	}
