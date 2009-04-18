@@ -21,7 +21,6 @@ import net.notdot.bdbdatastore.Indexing;
 import net.notdot.protorpc.ProtoRpcController;
 
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -83,6 +82,27 @@ public class DatastoreServiceTest {
 		.setKey(Entity.Reference.newBuilder().setApp("testapp").setPath(
 				Entity.Path.newBuilder().addElement(
 						Entity.Path.Element.newBuilder().setType(ByteString.copyFromUtf8("testtype"))))).build();
+	
+	// Sample composite index
+	Entity.CompositeIndex compositeIdx = Entity.CompositeIndex.newBuilder()
+		.setAppId("testapp")
+		.setId(0)
+		.setState(Entity.CompositeIndex.State.READ_WRITE) // Ignored
+		.setDefinition(Entity.Index.newBuilder()
+			.setEntityType(ByteString.copyFromUtf8("wtype"))
+			.setAncestor(false)
+			.addProperty(Entity.Index.Property.newBuilder()
+				.setName(ByteString.copyFromUtf8("tags"))
+				.setDirection(Entity.Index.Property.Direction.ASCENDING))
+			.addProperty(Entity.Index.Property.newBuilder()
+					.setName(ByteString.copyFromUtf8("num"))
+					.setDirection(Entity.Index.Property.Direction.DESCENDING))
+		).build();
+	
+	Entity.CompositeIndex compositeAncestorIdx = Entity.CompositeIndex.newBuilder(compositeIdx)
+		.setDefinition(Entity.Index.newBuilder(compositeIdx.getDefinition())
+			.setAncestor(true))
+		.build();
 	
 	protected File basedir;
 	protected Datastore datastore;
@@ -342,6 +362,8 @@ public class DatastoreServiceTest {
 			assertEquals(AppDatastore.toEntityKey(dataset_put.getEntity(i).getKey()), Indexing.EntityKey.parseFrom(key.getData()));
 			assertEquals(dataset_put.getEntity(i), Entity.EntityProto.parseFrom(data.getData()));
 		}
+		
+		cur.close();
 	}
 	
 	@Test
@@ -633,30 +655,15 @@ public class DatastoreServiceTest {
 	public void testCompositeIndexGeneration() throws ParseException, FileNotFoundException, IOException, DatabaseException {
 		RpcController controller = new ProtoRpcController();
 		
-		Entity.CompositeIndex idx = Entity.CompositeIndex.newBuilder()
-			.setAppId("testapp")
-			.setId(0)
-			.setState(Entity.CompositeIndex.State.READ_WRITE) // Ignored
-			.setDefinition(Entity.Index.newBuilder()
-				.setEntityType(ByteString.copyFromUtf8("wtype"))
-				.setAncestor(false)
-				.addProperty(Entity.Index.Property.newBuilder()
-					.setName(ByteString.copyFromUtf8("tags"))
-					.setDirection(Entity.Index.Property.Direction.DESCENDING))
-				.addProperty(Entity.Index.Property.newBuilder()
-						.setName(ByteString.copyFromUtf8("num"))
-						.setDirection(Entity.Index.Property.Direction.ASCENDING))
-			).build();
-		
 		TestRpcCallback<ApiBase.Integer64Proto> done = new TestRpcCallback<ApiBase.Integer64Proto>();
-		service.createIndex(controller, idx, done);
+		service.createIndex(controller, compositeIdx, done);
 		
 		loadCorpus();
 		
-		Object[] keyNames = new Object[] { "b", "a", "b", "a" };
+		Object[] keyNames = new Object[] { "a", "b", "a", "b" };
 		
 		AppDatastore ds = this.service.datastore.getAppDatastore("testapp");
-		SecondaryCursor cur = ds.indexes.get(idx.getDefinition()).openSecondaryCursor(null, null);
+		SecondaryCursor cur = ds.indexes.get(compositeIdx.getDefinition()).openSecondaryCursor(null, null);
 		List<String> resultNames = new ArrayList<String>();
 		DatabaseEntry key = new DatabaseEntry();
 		DatabaseEntry data = new DatabaseEntry();
@@ -667,5 +674,54 @@ public class DatastoreServiceTest {
 		}
 
 		assertArrayEquals(keyNames, resultNames.toArray());
+		
+		cur.close();
+	}
+	
+	@Test
+	public void testCompositeIndexQueries() throws ParseException, FileNotFoundException, IOException {
+		RpcController controller = new ProtoRpcController();
+		
+		TestRpcCallback<ApiBase.Integer64Proto> done = new TestRpcCallback<ApiBase.Integer64Proto>();
+		service.createIndex(controller, compositeIdx, done);
+		
+		loadCorpus();
+		
+		// Perform a basic composite index query
+		DatastoreV3.Query query = DatastoreV3.Query.newBuilder()
+			.setApp("testapp")
+			.setKind(ByteString.copyFromUtf8("wtype"))
+			.addFilter(DatastoreV3.Query.Filter.newBuilder()
+				.setOp(DatastoreV3.Query.Filter.Operator.EQUAL.getNumber())
+				.addProperty(Entity.Property.newBuilder()
+					.setName(ByteString.copyFromUtf8("tags"))
+					.setValue(Entity.PropertyValue.newBuilder()
+						.setStringValue(ByteString.copyFromUtf8("foo")))))
+			.addFilter(DatastoreV3.Query.Filter.newBuilder()
+				.setOp(DatastoreV3.Query.Filter.Operator.GREATER_THAN.getNumber())
+				.addProperty(Entity.Property.newBuilder()
+					.setName(ByteString.copyFromUtf8("num"))
+					.setValue(Entity.PropertyValue.newBuilder()
+						.setInt64Value(3))))
+			.addOrder(DatastoreV3.Query.Order.newBuilder()
+				.setProperty(ByteString.copyFromUtf8("num"))
+				.setDirection(DatastoreV3.Query.Order.Direction.DESCENDING.getNumber()))
+			.build();
+		TestRpcCallback<DatastoreV3.QueryResult> query_done = new TestRpcCallback<DatastoreV3.QueryResult>();
+		service.runQuery(controller, query, query_done);
+		assertTrue(query_done.isCalled());
+		assertTrue(service.cursors.containsKey(query_done.getValue().getCursor()));
+		
+		// Get the results
+		controller = new ProtoRpcController();
+		DatastoreV3.NextRequest next = DatastoreV3.NextRequest.newBuilder()
+			.setCursor(query_done.getValue().getCursor())
+			.setCount(5).build();
+		query_done = new TestRpcCallback<DatastoreV3.QueryResult>();
+		service.next(controller, next, query_done);
+		assertTrue(query_done.isCalled());
+		
+		assertEquals(1, query_done.getValue().getResultCount());
+		assertEquals("a", query_done.getValue().getResult(0).getKey().getPath().getElement(0).getName().toStringUtf8());
 	}
 }

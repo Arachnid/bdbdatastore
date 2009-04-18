@@ -302,8 +302,35 @@ public class AppDatastore {
 		ret = getMergeJoinQueryPlan(query);
 		if(ret != null)
 			return ret;
-		//TODO: Handle running out of query plans
+		ret = getCompositeIndexPlan(query);
+		if(ret != null)
+			return ret;
 		return null;
+	}
+
+	private AbstractDatastoreResultSet getCompositeIndexPlan(QuerySpec query) throws DatabaseException {
+		Entity.Index idx = query.getIndex();
+		SecondaryDatabase idxDb = this.indexes.get(idx);
+		if(idxDb == null)
+			return null;
+		
+		// Construct a start key
+		List<Entity.PropertyValue> values = new ArrayList<Entity.PropertyValue>();
+		boolean exclusiveMin = query.getLowerBound(values);
+		Indexing.CompositeIndexKey.Builder lowerBound = Indexing.CompositeIndexKey.newBuilder()
+			.addAllValue(values);
+		boolean exclusiveMax = query.getUpperBound(values);
+		Indexing.CompositeIndexKey.Builder upperBound = Indexing.CompositeIndexKey.newBuilder()
+			.addAllValue(values);
+		
+		if(query.hasAncestor()) {
+			lowerBound.setAncestor(query.getAncestor().getPath());
+			upperBound.setAncestor(query.getAncestor().getPath());
+		}
+		
+		Cursor cursor = idxDb.openCursor(null, null);
+		MessagePredicate predicate = new CompositeIndexPredicate(idx, upperBound.build(), exclusiveMax);
+		return new DatastoreResultSet(cursor, lowerBound.build(), exclusiveMin, query, predicate);
 	}
 
 	/* Attempts to generate a merge join multiple-equality query. */

@@ -1,6 +1,7 @@
 package net.notdot.bdbdatastore.server;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import net.notdot.protorpc.RpcFailedError;
@@ -29,6 +30,7 @@ public class QuerySpec {
 		if(query.hasAncestor())
 			this.ancestor = query.getAncestor();
 		this.filters = FilterSpec.FromQuery(query);
+		Collections.sort(this.filters);
 		this.orders = query.getOrderList();
 		if(query.hasOffset())
 			this.offset = query.getOffset();
@@ -47,7 +49,9 @@ public class QuerySpec {
 			// Add all equality filters
 			for(FilterSpec filter : this.filters) {
 				if(filter.getOperator() == DatastoreV3.Query.Filter.Operator.EQUAL.getNumber()) {
-					builder.addProperty(Entity.Index.Property.newBuilder().setName(filter.getName()));
+					builder.addProperty(Entity.Index.Property.newBuilder()
+						.setName(filter.getName())
+						.setDirection(Entity.Index.Property.Direction.ASCENDING));
 				} else {
 					if(inequalityprop != null && !filter.getName().equals(inequalityprop))
 						throw new RpcFailedError("Only one inequality property is permitted per query",

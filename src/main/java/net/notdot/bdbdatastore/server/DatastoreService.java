@@ -389,6 +389,9 @@ public class DatastoreService extends
 		
 		try {
 			AbstractDatastoreResultSet results = ds.executeQuery(request);
+			if(results == null)
+				throw new RpcFailedError(String.format("No index found to satisfy query %s", request),
+						DatastoreV3.Error.ErrorCode.NEED_INDEX.getNumber());
 			DatastoreV3.Cursor dscursor;
 			synchronized(this.cursors) {
 				dscursor = DatastoreV3.Cursor.newBuilder().setCursor(next_cursor_id++).build();
