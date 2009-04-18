@@ -229,7 +229,7 @@ message Index {
 
 message CompositeIndex {
   // The app that owns this composite index.
-  required bytes app_id = 1;
+  required string app_id = 1;
 
   // The index's ID. Used in CompositeProperty.
   required int64 id = 2;

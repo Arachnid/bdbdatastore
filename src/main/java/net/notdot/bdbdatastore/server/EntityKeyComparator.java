@@ -30,7 +30,7 @@ public class EntityKeyComparator implements Comparator<Indexing.EntityKey> {
 		return Indexing.EntityKey.newBuilder().setKind(kind).setPath(path).build();
 	}
 	
-	protected int compareElements(Entity.Path.Element e1, Entity.Path.Element e2) {
+	private static int compareElements(Entity.Path.Element e1, Entity.Path.Element e2) {
 		int ret = e1.getType().asReadOnlyByteBuffer().compareTo(e2.getType().asReadOnlyByteBuffer());
 		if(ret != 0)
 			return ret;
@@ -65,7 +65,7 @@ public class EntityKeyComparator implements Comparator<Indexing.EntityKey> {
 		return comparePaths(p1, p2);
 	}
 
-	private int comparePaths(Path p1, Path p2) {
+	public static int comparePaths(Path p1, Path p2) {
 		int p1len = p1.getElementCount();
 		int p2len = p2.getElementCount();
 		int ret = 0;

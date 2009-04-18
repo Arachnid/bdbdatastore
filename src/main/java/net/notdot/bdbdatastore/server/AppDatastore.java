@@ -1,18 +1,26 @@
 package net.notdot.bdbdatastore.server;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import net.notdot.bdbdatastore.Indexing;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.appengine.base.ApiBase;
 import com.google.appengine.datastore_v3.DatastoreV3.Query;
 import com.google.appengine.entity.Entity;
 import com.google.appengine.entity.Entity.EntityProto;
@@ -22,6 +30,7 @@ import com.google.appengine.entity.Entity.Reference;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
+import com.google.protobuf.RpcCallback;
 import com.sleepycat.je.Cursor;
 import com.sleepycat.je.Database;
 import com.sleepycat.je.DatabaseConfig;
@@ -41,9 +50,11 @@ import com.sleepycat.je.TransactionConfig;
 
 public class AppDatastore {
 	final Logger logger = LoggerFactory.getLogger(AppDatastore.class);
-	
+		
 	protected String app_id;
 	
+	protected File datastore_dir;
+
 	// The database environment, containing all the tables and indexes.
 	protected Environment env;
 	
@@ -55,12 +66,19 @@ public class AppDatastore {
 	// This table stores counter values. We can't store them in the entities table, because getSequence
 	// inserts records in the database it's called on.
 	protected Database sequences;
+
+	// Cached sequences
+	protected Map<Reference, Sequence> sequence_cache = new HashMap<Reference, Sequence>();
 	
 	// We define a single built-in index for satisfying equality queries on fields.
 	protected SecondaryDatabase entities_by_property;
 	
-	// Cached sequences
-	protected Map<Reference, Sequence> sequence_cache = new HashMap<Reference, Sequence>();
+	// Maps index definitions to IDs
+	protected Map<Entity.Index, Long> index_ids = new HashMap<Entity.Index, Long>();
+	protected long next_index_id;
+	
+	// Maps index definitions to index databases
+	protected Map<Entity.Index, SecondaryDatabase> indexes = new ConcurrentHashMap<Entity.Index, SecondaryDatabase>();
 	
 	/**
 	 * @param basedir
@@ -72,7 +90,7 @@ public class AppDatastore {
 			throws EnvironmentLockedException, DatabaseException {
 		this.app_id = app_id;
 		
-		File datastore_dir = new File(basedir, app_id);
+		datastore_dir = new File(basedir, app_id);
 		datastore_dir.mkdir();
 		
 		EnvironmentConfig envconfig = new EnvironmentConfig();
@@ -98,6 +116,84 @@ public class AppDatastore {
 		secondconfig.setSortedDuplicates(true);
 		secondconfig.setTransactional(true);
 		entities_by_property = env.openSecondaryDatabase(null, "entities_by_property", entities, secondconfig);
+		
+		loadCompositeIndexes();
+	}
+	
+	public void addIndex(Entity.CompositeIndex idx, RpcCallback<ApiBase.Integer64Proto> done) throws DatabaseException {
+		Entity.Index idxDef = idx.getDefinition();
+		
+		synchronized(this.index_ids) {
+			if(this.index_ids.containsKey(idxDef)) {
+				if(done != null)
+					done.run(ApiBase.Integer64Proto.newBuilder().setValue(this.index_ids.get(idxDef)).build());
+				return;
+			}
+			if(idx.getId() == 0) {
+				idx = Entity.CompositeIndex.newBuilder(idx).setId(this.next_index_id++).build();
+			}
+			this.index_ids.put(idxDef, idx.getId());
+		}
+		if(done != null)
+			done.run(ApiBase.Integer64Proto.newBuilder().setValue(idx.getId()).build());
+		
+		SecondaryConfig config = new SecondaryConfig();
+		config.setAllowCreate(true);
+		config.setAllowPopulate(true);
+		config.setBtreeComparator(new SerializedCompositeIndexKeyComparator(idxDef));
+		config.setDuplicateComparator(SerializedEntityKeyComparator.class);
+		config.setMultiKeyCreator(new CompositeIndexIndexer(idxDef));
+		config.setSortedDuplicates(true);
+		config.setTransactional(true);
+		
+		String idxName = String.format("idx-%X", idx.getId());
+		SecondaryDatabase idxDb = env.openSecondaryDatabase(null, idxName, entities, config);
+		this.indexes.put(idxDef, idxDb);
+	}
+	
+	private void loadCompositeIndexes() throws DatabaseException {
+		this.index_ids.clear();
+		this.indexes.clear();
+		this.next_index_id = 1;
+		
+		InputStream idxdata = null;
+		try {
+			idxdata = new FileInputStream(new File(this.datastore_dir, "indexes.dat"));
+			Indexing.IndexList indexList = Indexing.IndexList.parseFrom(idxdata);
+			
+			for(Entity.CompositeIndex idx : indexList.getIndexList())
+				this.addIndex(idx, null);
+			this.next_index_id = indexList.getNextId();
+		} catch(FileNotFoundException ex) {
+			// Do nothing - no custom indexes present.
+		} catch (IOException e) {
+			// Failed to read indexes
+		} finally {
+			try {
+				if(idxdata != null)
+					idxdata.close();
+			} catch(IOException e) {
+				// At least we tried.
+			}
+		}
+		// TODO: Add code to find and delete stray index DBs
+	}
+	
+	public void saveCompositeIndexes() throws IOException {
+		Indexing.IndexList.Builder indexList = Indexing.IndexList.newBuilder();
+		for(Map.Entry<Entity.Index, Long> item : this.index_ids.entrySet()) {
+			indexList.addIndex(Entity.CompositeIndex.newBuilder()
+				.setAppId(this.app_id)
+				.setId(item.getValue())
+				.setDefinition(item.getKey())
+				.setState(Entity.CompositeIndex.State.READ_WRITE)
+				.build());
+		}
+		indexList.setNextId(this.next_index_id);
+		
+		OutputStream idxout = new FileOutputStream(new File(this.datastore_dir, "indexes.dat"));
+		indexList.build().writeTo(idxout);
+		idxout.close();
 	}
 	
 	public void close() throws DatabaseException {

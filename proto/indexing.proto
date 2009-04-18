@@ -15,4 +15,14 @@ message PropertyIndexKey {
   required bytes name = 2;
   optional com.google.appengine.entity.PropertyValue value = 3;
 }
- 
+
+message CompositeIndexKey {
+  optional com.google.appengine.entity.Path ancestor = 1;
+  repeated com.google.appengine.entity.PropertyValue value = 2;
+}
+
+// Protocol for storing the list of custom indexes to disk
+message IndexList {
+  repeated com.google.appengine.entity.CompositeIndex index = 1;
+  required int64 next_id = 2;
+}

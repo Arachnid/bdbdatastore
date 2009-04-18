@@ -3707,11 +3707,11 @@ public final class Entity {
       }
     }
     
-    // required bytes app_id = 1;
+    // required string app_id = 1;
     private boolean hasAppId;
-    private com.google.protobuf.ByteString appId_ = com.google.protobuf.ByteString.EMPTY;
+    private java.lang.String appId_ = "";
     public boolean hasAppId() { return hasAppId; }
-    public com.google.protobuf.ByteString getAppId() { return appId_; }
+    public java.lang.String getAppId() { return appId_; }
     
     // required int64 id = 2;
     private boolean hasId;
@@ -3841,21 +3841,21 @@ public final class Entity {
       }
       
       
-      // required bytes app_id = 1;
+      // required string app_id = 1;
       public boolean hasAppId() {
         return result.hasAppId();
       }
-      public com.google.protobuf.ByteString getAppId() {
+      public java.lang.String getAppId() {
         return result.getAppId();
       }
-      public Builder setAppId(com.google.protobuf.ByteString value) {
+      public Builder setAppId(java.lang.String value) {
         result.hasAppId = true;
         result.appId_ = value;
         return this;
       }
       public Builder clearAppId() {
         result.hasAppId = false;
-        result.appId_ = com.google.protobuf.ByteString.EMPTY;
+        result.appId_ = "";
         return this;
       }
       
@@ -4073,7 +4073,7 @@ public final class Entity {
       "ngine.entity.Index.Property.Direction:\tA" +
       "SCENDING\"*\n\tDirection\022\r\n\tASCENDING\020\001\022\016\n\n" +
       "DESCENDING\020\002\"\347\001\n\016CompositeIndex\022\016\n\006app_i" +
-      "d\030\001 \002(\014\022\n\n\002id\030\002 \002(\003\0226\n\ndefinition\030\003 \002(\0132" +
+      "d\030\001 \002(\t\022\n\n\002id\030\002 \002(\003\0226\n\ndefinition\030\003 \002(\0132" +
       "\".com.google.appengine.entity.Index\022@\n\005s" +
       "tate\030\004 \002(\01621.com.google.appengine.entity" +
       ".CompositeIndex.State\"?\n\005State\022\016\n\nWRITE_" +

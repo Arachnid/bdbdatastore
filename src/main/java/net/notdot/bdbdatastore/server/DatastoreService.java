@@ -182,8 +182,14 @@ public class DatastoreService extends
 	@Override
 	public void createIndex(RpcController controller, CompositeIndex request,
 			RpcCallback<Integer64Proto> done) {
-		// TODO Auto-generated method stub
-
+		String app_id = request.getAppId();
+		AppDatastore ds = this.datastore.getAppDatastore(app_id);
+		try {
+			ds.addIndex(request, done);
+			ds.saveCompositeIndexes();
+		} catch (Exception ex) {
+			throw new RpcFailedError(ex, DatastoreV3.Error.ErrorCode.INTERNAL_ERROR.getNumber());
+		}
 	}
 
 	@Override

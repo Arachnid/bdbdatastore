@@ -1,5 +1,6 @@
 package net.notdot.bdbdatastore.server;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -10,14 +11,17 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import net.notdot.bdbdatastore.Indexing;
 import net.notdot.protorpc.ProtoRpcController;
 
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -33,6 +37,8 @@ import com.google.protobuf.TextFormat.ParseException;
 import com.sleepycat.je.Cursor;
 import com.sleepycat.je.DatabaseEntry;
 import com.sleepycat.je.DatabaseException;
+import com.sleepycat.je.OperationStatus;
+import com.sleepycat.je.SecondaryCursor;
 
 public class DatastoreServiceTest {
 	protected class TestRpcCallback<T> implements RpcCallback<T> {
@@ -621,5 +627,45 @@ public class DatastoreServiceTest {
 		service.count(controller, query, done);
 		assertTrue(done.isCalled());
 		assertEquals(4, done.getValue().getValue());
+	}
+	
+	@Test
+	public void testCompositeIndexGeneration() throws ParseException, FileNotFoundException, IOException, DatabaseException {
+		RpcController controller = new ProtoRpcController();
+		
+		Entity.CompositeIndex idx = Entity.CompositeIndex.newBuilder()
+			.setAppId("testapp")
+			.setId(0)
+			.setState(Entity.CompositeIndex.State.READ_WRITE) // Ignored
+			.setDefinition(Entity.Index.newBuilder()
+				.setEntityType(ByteString.copyFromUtf8("wtype"))
+				.setAncestor(false)
+				.addProperty(Entity.Index.Property.newBuilder()
+					.setName(ByteString.copyFromUtf8("tags"))
+					.setDirection(Entity.Index.Property.Direction.DESCENDING))
+				.addProperty(Entity.Index.Property.newBuilder()
+						.setName(ByteString.copyFromUtf8("num"))
+						.setDirection(Entity.Index.Property.Direction.ASCENDING))
+			).build();
+		
+		TestRpcCallback<ApiBase.Integer64Proto> done = new TestRpcCallback<ApiBase.Integer64Proto>();
+		service.createIndex(controller, idx, done);
+		
+		loadCorpus();
+		
+		Object[] keyNames = new Object[] { "b", "a", "b", "a" };
+		
+		AppDatastore ds = this.service.datastore.getAppDatastore("testapp");
+		SecondaryCursor cur = ds.indexes.get(idx.getDefinition()).openSecondaryCursor(null, null);
+		List<String> resultNames = new ArrayList<String>();
+		DatabaseEntry key = new DatabaseEntry();
+		DatabaseEntry data = new DatabaseEntry();
+		
+		while(cur.getNext(key, data, null) == OperationStatus.SUCCESS) {
+			Entity.EntityProto entity = Entity.EntityProto.parseFrom(data.getData());
+			resultNames.add(entity.getKey().getPath().getElement(0).getName().toStringUtf8());
+		}
+
+		assertArrayEquals(keyNames, resultNames.toArray());
 	}
 }
