@@ -688,7 +688,10 @@ public class DatastoreServiceTest {
 		loadCorpus();
 		
 		// Perform a basic composite index query
-		DatastoreV3.Query query = DatastoreV3.Query.newBuilder()
+		List<DatastoreV3.Query> queries = new ArrayList<DatastoreV3.Query>();
+		List<String[]> resultSets = new ArrayList<String[]>();
+		
+		queries.add(DatastoreV3.Query.newBuilder()
 			.setApp("testapp")
 			.setKind(ByteString.copyFromUtf8("wtype"))
 			.addFilter(DatastoreV3.Query.Filter.newBuilder()
@@ -706,42 +709,34 @@ public class DatastoreServiceTest {
 			.addOrder(DatastoreV3.Query.Order.newBuilder()
 				.setProperty(ByteString.copyFromUtf8("num"))
 				.setDirection(DatastoreV3.Query.Order.Direction.DESCENDING.getNumber()))
-			.build();
-		TestRpcCallback<DatastoreV3.QueryResult> query_done = new TestRpcCallback<DatastoreV3.QueryResult>();
-		service.runQuery(controller, query, query_done);
-		assertTrue(query_done.isCalled());
-		assertTrue(service.cursors.containsKey(query_done.getValue().getCursor()));
+			.build());
+		resultSets.add(new String[] { "a" });
 		
-		// Get the results
-		controller = new ProtoRpcController();
-		DatastoreV3.NextRequest next = DatastoreV3.NextRequest.newBuilder()
-			.setCursor(query_done.getValue().getCursor())
-			.setCount(5).build();
-		query_done = new TestRpcCallback<DatastoreV3.QueryResult>();
-		service.next(controller, next, query_done);
-		assertTrue(query_done.isCalled());
+		queries.add(DatastoreV3.Query.newBuilder(queries.get(0)).clearFilter().addFilter(queries.get(0).getFilter(0)).build());
+		resultSets.add(new String[] { "a", "b" });
+
+		for(int i = 0; i < queries.size(); i++) {
+			DatastoreV3.Query query = queries.get(i);
+			String[] results = resultSets.get(i);
+			
+			TestRpcCallback<DatastoreV3.QueryResult> query_done = new TestRpcCallback<DatastoreV3.QueryResult>();
+			service.runQuery(controller, query, query_done);
+			assertTrue(query_done.isCalled());
+			assertTrue(service.cursors.containsKey(query_done.getValue().getCursor()));
 		
-		assertEquals(1, query_done.getValue().getResultCount());
-		assertEquals("a", query_done.getValue().getResult(0).getKey().getPath().getElement(0).getName().toStringUtf8());
-		
-		// Perform a query with one filter and one order
-		query = DatastoreV3.Query.newBuilder(query).clearFilter().addFilter(query.getFilter(0)).build();
-		
-		controller = new ProtoRpcController();
-		query_done = new TestRpcCallback<DatastoreV3.QueryResult>();
-		service.runQuery(controller, query, query_done);
-		assertTrue(query_done.isCalled());
-		
-		// Get the results
-		controller = new ProtoRpcController();
-		next = DatastoreV3.NextRequest.newBuilder()
-			.setCursor(query_done.getValue().getCursor())
-			.setCount(5).build();
-		query_done = new TestRpcCallback<DatastoreV3.QueryResult>();
-		service.next(controller, next, query_done);
-		assertTrue(query_done.isCalled());
-		
-		assertEquals(2, query_done.getValue().getResultCount());
+			// Get the results
+			controller = new ProtoRpcController();
+			DatastoreV3.NextRequest next = DatastoreV3.NextRequest.newBuilder()
+				.setCursor(query_done.getValue().getCursor())
+				.setCount(5).build();
+			query_done = new TestRpcCallback<DatastoreV3.QueryResult>();
+			service.next(controller, next, query_done);
+			assertTrue(query_done.isCalled());
+			
+			assertEquals(results.length, query_done.getValue().getResultCount());
+			for(int j = 0; j < results.length; j++)
+				assertEquals(String.format("i=%d, j=%d", i, j), results[j], query_done.getValue().getResult(j).getKey().getPath().getElement(0).getName().toStringUtf8());
+		}
 	}
 	
 	@Test
