@@ -101,6 +101,7 @@ public class DatastoreServiceTest {
 	
 	Entity.CompositeIndex compositeAncestorIdx = Entity.CompositeIndex.newBuilder(compositeIdx)
 		.setDefinition(Entity.Index.newBuilder(compositeIdx.getDefinition())
+			.setEntityType(ByteString.copyFromUtf8("vtype"))
 			.setAncestor(true))
 		.build();
 	
@@ -685,6 +686,10 @@ public class DatastoreServiceTest {
 		TestRpcCallback<ApiBase.Integer64Proto> done = new TestRpcCallback<ApiBase.Integer64Proto>();
 		service.createIndex(controller, compositeIdx, done);
 		
+		controller = new ProtoRpcController();
+		done = new TestRpcCallback<ApiBase.Integer64Proto>();
+		service.createIndex(controller, compositeAncestorIdx, done);
+		
 		loadCorpus();
 		
 		// Perform a basic composite index query
@@ -722,10 +727,28 @@ public class DatastoreServiceTest {
 				.setProperty(ByteString.copyFromUtf8("tags"))
 				.setDirection(DatastoreV3.Query.Order.Direction.ASCENDING.getNumber()))
 			.addOrder(DatastoreV3.Query.Order.newBuilder()
-					.setProperty(ByteString.copyFromUtf8("num"))
-					.setDirection(DatastoreV3.Query.Order.Direction.DESCENDING.getNumber()))
+				.setProperty(ByteString.copyFromUtf8("num"))
+				.setDirection(DatastoreV3.Query.Order.Direction.DESCENDING.getNumber()))
 			.build());
 		resultSets.add(new String[] { "a", "b", "a", "b" });
+		
+		queries.add(DatastoreV3.Query.newBuilder()
+			.setApp("testapp")
+			.setKind(ByteString.copyFromUtf8("vtype"))
+			.setAncestor(Entity.Reference.newBuilder()
+				.setApp("testapp")
+				.setPath(Entity.Path.newBuilder()
+					.addElement(Entity.Path.Element.newBuilder()
+						.setType(ByteString.copyFromUtf8("vtype"))
+						.setName(ByteString.copyFromUtf8("bar")))))
+			.addOrder(DatastoreV3.Query.Order.newBuilder()
+				.setProperty(ByteString.copyFromUtf8("tags"))
+				.setDirection(DatastoreV3.Query.Order.Direction.ASCENDING.getNumber()))
+			.addOrder(DatastoreV3.Query.Order.newBuilder()
+				.setProperty(ByteString.copyFromUtf8("num"))
+				.setDirection(DatastoreV3.Query.Order.Direction.DESCENDING.getNumber()))
+			.build());
+		resultSets.add(new String[] { "foo", "baz", "foo", "baz" });
 		
 		for(int i = 0; i < queries.size(); i++) {
 			DatastoreV3.Query query = queries.get(i);
@@ -746,8 +769,10 @@ public class DatastoreServiceTest {
 			assertTrue(query_done.isCalled());
 			
 			assertEquals(String.format("i=%d", i), results.length, query_done.getValue().getResultCount());
-			for(int j = 0; j < results.length; j++)
-				assertEquals(String.format("i=%d, j=%d", i, j), results[j], query_done.getValue().getResult(j).getKey().getPath().getElement(0).getName().toStringUtf8());
+			for(int j = 0; j < results.length; j++) {
+				Entity.Path path = query_done.getValue().getResult(j).getKey().getPath();
+				assertEquals(String.format("i=%d, j=%d", i, j), results[j], path.getElement(path.getElementCount() - 1).getName().toStringUtf8());
+			}
 		}
 	}
 	

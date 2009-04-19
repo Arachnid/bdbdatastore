@@ -94,7 +94,7 @@ public class CompositeIndexIndexer implements SecondaryMultiKeyCreator {
 		Entity.Path.Builder subpath = Entity.Path.newBuilder();
 		for(int i = 0; i < path.getElementCount(); i++) {
 			subpath.addElement(path.getElement(i));
-			entry.setAncestor(subpath);
+			entry.setAncestor(subpath.clone());
 			count += generateEntries(results, entry, lists, 0, max - count);
 			if(count >= max)
 				break;

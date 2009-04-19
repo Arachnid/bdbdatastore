@@ -153,6 +153,24 @@ entity {
       name: "bar"
     }
   }
+  property {
+    name: "num"
+    value {
+      int64Value: 10
+    }
+  }
+  property {
+    name: "tags"
+    value {
+      stringValue: "bar"
+    }
+  }
+  property {
+    name: "tags"
+    value {
+      stringValue: "foo"
+    }
+  }
 }
 entity {
   key {
@@ -193,6 +211,24 @@ entity {
     Element {
       type: "vtype"
       name: "bar"
+    }
+  }
+  property {
+    name: "num"
+    value {
+      int64Value: 10
+    }
+  }
+  property {
+    name: "tags"
+    value {
+      stringValue: "bar"
+    }
+  }
+  property {
+    name: "tags"
+    value {
+      stringValue: "foo"
     }
   }
 }
