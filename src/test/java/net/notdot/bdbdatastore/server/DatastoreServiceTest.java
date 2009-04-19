@@ -715,6 +715,18 @@ public class DatastoreServiceTest {
 		queries.add(DatastoreV3.Query.newBuilder(queries.get(0)).clearFilter().addFilter(queries.get(0).getFilter(0)).build());
 		resultSets.add(new String[] { "a", "b" });
 
+		queries.add(DatastoreV3.Query.newBuilder()
+			.setApp("testapp")
+			.setKind(ByteString.copyFromUtf8("wtype"))
+			.addOrder(DatastoreV3.Query.Order.newBuilder()
+				.setProperty(ByteString.copyFromUtf8("tags"))
+				.setDirection(DatastoreV3.Query.Order.Direction.ASCENDING.getNumber()))
+			.addOrder(DatastoreV3.Query.Order.newBuilder()
+					.setProperty(ByteString.copyFromUtf8("num"))
+					.setDirection(DatastoreV3.Query.Order.Direction.DESCENDING.getNumber()))
+			.build());
+		resultSets.add(new String[] { "a", "b", "a", "b" });
+		
 		for(int i = 0; i < queries.size(); i++) {
 			DatastoreV3.Query query = queries.get(i);
 			String[] results = resultSets.get(i);
@@ -733,7 +745,7 @@ public class DatastoreServiceTest {
 			service.next(controller, next, query_done);
 			assertTrue(query_done.isCalled());
 			
-			assertEquals(results.length, query_done.getValue().getResultCount());
+			assertEquals(String.format("i=%d", i), results.length, query_done.getValue().getResultCount());
 			for(int j = 0; j < results.length; j++)
 				assertEquals(String.format("i=%d, j=%d", i, j), results[j], query_done.getValue().getResult(j).getKey().getPath().getElement(0).getName().toStringUtf8());
 		}

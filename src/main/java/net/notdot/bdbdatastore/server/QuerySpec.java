@@ -129,9 +129,12 @@ public class QuerySpec {
 				if(currentBound != null)
 					bounds.add(currentBound);
 			}
-			// First unfiltered property - add a sentinel if it's the upper bound
-			if(currentBound == null && currentDirection == -1)
-				bounds.add(Entity.PropertyValue.getDefaultInstance());
+			if(currentBound == null) {
+				// First unfiltered property - add a sentinel if it's the upper bound
+				if(currentDirection == -1)
+					bounds.add(Entity.PropertyValue.getDefaultInstance());
+				return exclusiveBound;
+			}
 		}
 		return exclusiveBound;
 	}
