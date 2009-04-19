@@ -1,9 +1,7 @@
 package net.notdot.bdbdatastore.server;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -23,7 +21,7 @@ public class QuerySpec {
 	protected int limit = -1;
 	
 	protected Entity.Index index = null;
-	protected boolean hasInequalities;
+	protected boolean _hasInequalities;
 	
 	public QuerySpec(DatastoreV3.Query query) {
 		this.app = query.getApp();
@@ -57,7 +55,7 @@ public class QuerySpec {
 							.setName(filter.getName())
 							.setDirection(Entity.Index.Property.Direction.ASCENDING));
 					} else {
-						this.hasInequalities = true;
+						this._hasInequalities = true;
 						if(inequalityprop != null && !filter.getName().equals(inequalityprop))
 							throw new RpcFailedError("Only one inequality property is permitted per query",
 									DatastoreV3.Error.ErrorCode.BAD_REQUEST.getNumber());
@@ -88,59 +86,52 @@ public class QuerySpec {
 
 	public boolean getBounds(Entity.Index idx, int direction, List<Entity.PropertyValue> bounds) {
 		boolean exclusiveBound = false;
-		Entity.PropertyValue inequalityBound = null;
-		Iterator<Entity.Index.Property> iter = idx.getPropertyList().iterator();
-		int currentDirection = 0;
-		ByteString currentProperty = null;
 		
-		for(FilterSpec filter : this.filters) {
-			if(currentProperty == null || !currentProperty.equals(filter.getName())) {
-				currentDirection = direction * (iter.next().getDirection()==Entity.Index.Property.Direction.ASCENDING?1:-1);
-				currentProperty = filter.getName();
+		for(Entity.Index.Property prop : idx.getPropertyList()) {
+			int currentDirection = direction * (prop.getDirection()==Entity.Index.Property.Direction.ASCENDING?1:-1);
+			List<FilterSpec> filterList = this.filters.get(prop.getName());
+			Entity.PropertyValue currentBound = null;
+			if(filterList != null) {
+				// Property is filtered on - figure out the appropriate bounds
+				int cmp = 0;
+				for(FilterSpec filter : this.filters.get(prop.getName())) {
+					if(currentBound != null)
+						cmp = PropertyValueComparator.instance.compare(filter.getValue(), currentBound);
+					switch(filter.getOperator()) {
+					case 1: // Less than
+						if(currentDirection == -1 && (currentBound == null || cmp > 0)) {
+							currentBound = filter.getValue();
+							exclusiveBound = true;
+						}
+						break;
+					case 2: // Less than or equal
+						if(currentDirection == -1 && (currentBound == null || cmp >= 0)) {
+							currentBound = filter.getValue();
+							exclusiveBound = false;
+						}
+						break;
+					case 3: // Greater than
+						if(currentDirection == 1 && (currentBound == null || cmp < 0)) {
+							currentBound = filter.getValue();
+							exclusiveBound = true;
+						}
+						break;
+					case 4: // Greater than or equal
+						if(currentDirection == 1 && (currentBound == null || cmp <= 0)) {
+							currentBound = filter.getValue();
+							exclusiveBound = false;
+						}
+						break;
+					case 5: // Equal
+						currentBound = filter.getValue();
+					}
+				}
+				if(currentBound != null)
+					bounds.add(currentBound);
 			}
-
-			switch(filter.getOperator()) {
-			case 1: // Less than
-				if(currentDirection == -1 && (inequalityBound == null || PropertyValueComparator.instance.compare(filter.getValue(), inequalityBound) > 0)) {
-					inequalityBound = filter.getValue();
-					exclusiveBound = true;
-				}
-				break;
-			case 2: // Less than or equal
-				if(currentDirection == -1 && (inequalityBound == null || PropertyValueComparator.instance.compare(filter.getValue(), inequalityBound) >= 0)) {
-					inequalityBound = filter.getValue();
-					exclusiveBound = false;
-				}
-				break;
-			case 3: // Greater than
-				if(currentDirection == 1 && (inequalityBound == null || PropertyValueComparator.instance.compare(filter.getValue(), inequalityBound) < 0)) {
-					inequalityBound = filter.getValue();
-					exclusiveBound = true;
-				}
-				break;
-			case 4: // Greater than or equal
-				if(currentDirection == 1 && (inequalityBound == null || PropertyValueComparator.instance.compare(filter.getValue(), inequalityBound) <= 0)) {
-					inequalityBound = filter.getValue();
-					exclusiveBound = false;
-				}
-				break;
-			case 5: // Equal
-				bounds.add(filter.getValue());
-			}
-		}
-		if(inequalityBound != null) {
-			bounds.add(inequalityBound);
-		} else {
-			// Get the direction of the next field
-			if(iter.hasNext()) {
-				currentDirection = direction * (iter.next().getDirection()==Entity.Index.Property.Direction.ASCENDING?1:-1);
-			} else {
-				currentDirection = 1;
-			}
-			if(currentDirection == -1) {
-				// Upper bound needs a delimiter
+			// First unfiltered property - add a sentinel if it's the upper bound
+			if(currentBound == null && currentDirection == -1)
 				bounds.add(Entity.PropertyValue.getDefaultInstance());
-			}
 		}
 		return exclusiveBound;
 	}
@@ -164,7 +155,7 @@ public class QuerySpec {
 	public boolean hasInequalities() {
 		if(this.index == null)
 			this.getIndex();
-		return this.hasInequalities;
+		return this._hasInequalities;
 	}
 
 	public Map<ByteString, List<FilterSpec>> getFilters() {

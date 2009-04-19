@@ -338,7 +338,7 @@ public class AppDatastore {
 			return null;
 
 		// Check only equality filters are used
-		if(query.getFilters().get(query.getFilters().size() - 1).getOperator() != 5)
+		if(query.hasInequalities())
 			return null;
 		
 		// Check no sort orders are specified
