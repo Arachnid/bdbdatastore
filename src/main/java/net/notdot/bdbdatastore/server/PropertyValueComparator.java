@@ -21,7 +21,7 @@ public class PropertyValueComparator implements Comparator<Entity.PropertyValue>
 			return 6;
 		if(p.hasReferenceValue())
 			return 7;
-		return 0;
+		return 100; // Counterintuitive, but it lets us use an empty property as a 'last' delimiter.
 	}
 	
 	protected int compareLongs(long i1, long i2) {

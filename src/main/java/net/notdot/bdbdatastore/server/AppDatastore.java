@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -29,7 +28,6 @@ import com.google.appengine.entity.Entity.Property;
 import com.google.appengine.entity.Entity.Reference;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.Message;
 import com.google.protobuf.RpcCallback;
 import com.sleepycat.je.Cursor;
 import com.sleepycat.je.Database;
@@ -365,7 +363,18 @@ public class AppDatastore {
 				.setValue(values.get(i))
 				.build();
 			cursors[i] = this.entities_by_property.openCursor(null, null);
-			getFirstResult(cursors[i], startKey, false);
+			
+			// Find the requested entry
+			DatabaseEntry key = new DatabaseEntry(startKey.toByteArray());
+			DatabaseEntry data = new DatabaseEntry();
+			OperationStatus status = cursors[i].getSearchKey(key, data, null);
+			// If we can't find it, the whole query returns 0 results
+			if(status != OperationStatus.SUCCESS) {
+				// Close any cursors we already opened
+				for(int j = 0; j <= i; j++) 
+					cursors[i].close();
+				return new EmptyDatastoreResultSet(query);
+			}
 		}
 		
 		// Construct a join cursor
@@ -399,7 +408,8 @@ public class AppDatastore {
 			.setName(index.getProperty(0).getName());
 		values.clear();
 		boolean exclusiveMax = query.getBounds(query.getIndex(), -1, values);
-		if(values.size() == 1) {
+		// Special case for equality queries: getBounds returns a sentinel value for the upper bound.
+		if(values.size() == 1 || (values.size() == 2 && values.get(1).equals(Entity.PropertyValue.getDefaultInstance()))) {
 			upperBound.setValue(values.get(0));
 		} else if(values.size() > 1) {
 			return null;
@@ -436,15 +446,5 @@ public class AppDatastore {
 		Indexing.EntityKey startKey = Indexing.EntityKey.newBuilder().setKind(query.getKind()).build();
 		MessagePredicate predicate = new KeyPredicate(startKey);
 		return new DatastoreResultSet(cursor, startKey, false, query, predicate);
-	}
-
-	private void getFirstResult(Cursor cursor, Message startKey, boolean exclusiveMin) throws DatabaseException {
-		byte[] startKeyBytes = startKey.toByteArray();
-		DatabaseEntry key = new DatabaseEntry(startKeyBytes);
-		DatabaseEntry data = new DatabaseEntry();
-		OperationStatus status = cursor.getSearchKeyRange(key, data, null);
-		if(status == OperationStatus.SUCCESS && exclusiveMin && Arrays.equals(startKeyBytes, key.getData())) {
-			status = cursor.getNextNoDup(key, data, null);
-		}
 	}
 }

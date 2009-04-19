@@ -1,7 +1,9 @@
 package net.notdot.bdbdatastore.server;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.google.appengine.datastore_v3.DatastoreV3;
 import com.google.appengine.entity.Entity;
@@ -18,12 +20,17 @@ public class FilterSpec implements Comparable<FilterSpec> {
 		this.value = value;
 	}
 	
-	public static List<FilterSpec> FromQuery(DatastoreV3.Query query) {
-		List<FilterSpec> ret = new ArrayList<FilterSpec>();
+	public static Map<ByteString, List<FilterSpec>> FromQuery(DatastoreV3.Query query) {
+		Map<ByteString, List<FilterSpec>> ret = new HashMap<ByteString, List<FilterSpec>>();
 		
 		for(DatastoreV3.Query.Filter filter : query.getFilterList()) {
 			for(Entity.Property prop : filter.getPropertyList()) {
-				ret.add(new FilterSpec(prop.getName(), filter.getOp(), prop.getValue()));
+				List<FilterSpec> filters = ret.get(prop.getName());
+				if(filters == null) {
+					filters = new ArrayList<FilterSpec>();
+					ret.put(prop.getName(), filters);
+				}
+				filters.add(new FilterSpec(prop.getName(), filter.getOp(), prop.getValue()));
 			}
 		}
 		return ret;

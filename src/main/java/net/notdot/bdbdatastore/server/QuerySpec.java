@@ -2,8 +2,10 @@ package net.notdot.bdbdatastore.server;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import net.notdot.protorpc.RpcFailedError;
 
@@ -15,12 +17,13 @@ public class QuerySpec {
 	protected String app;
 	protected ByteString kind;
 	protected Entity.Reference ancestor = null;
-	protected List<FilterSpec> filters = new ArrayList<FilterSpec>();
+	protected Map<ByteString, List<FilterSpec>> filters = new HashMap<ByteString, List<FilterSpec>>();
 	protected List<DatastoreV3.Query.Order> orders = new ArrayList<DatastoreV3.Query.Order>();
 	protected int offset = 0;
 	protected int limit = -1;
 	
 	protected Entity.Index index = null;
+	protected boolean hasInequalities;
 	
 	public QuerySpec(DatastoreV3.Query query) {
 		this.app = query.getApp();
@@ -31,7 +34,6 @@ public class QuerySpec {
 		if(query.hasAncestor())
 			this.ancestor = query.getAncestor();
 		this.filters = FilterSpec.FromQuery(query);
-		Collections.sort(this.filters);
 		this.orders = query.getOrderList();
 		if(query.hasOffset())
 			this.offset = query.getOffset();
@@ -48,16 +50,19 @@ public class QuerySpec {
 			ByteString inequalityprop = null;
 			
 			// Add all equality filters
-			for(FilterSpec filter : this.filters) {
-				if(filter.getOperator() == DatastoreV3.Query.Filter.Operator.EQUAL.getNumber()) {
-					builder.addProperty(Entity.Index.Property.newBuilder()
-						.setName(filter.getName())
-						.setDirection(Entity.Index.Property.Direction.ASCENDING));
-				} else {
-					if(inequalityprop != null && !filter.getName().equals(inequalityprop))
-						throw new RpcFailedError("Only one inequality property is permitted per query",
-								DatastoreV3.Error.ErrorCode.BAD_REQUEST.getNumber());
-					inequalityprop = filter.getName();
+			for(List<FilterSpec> filterList : this.filters.values()) {
+				for(FilterSpec filter : filterList) {
+					if(filter.getOperator() == DatastoreV3.Query.Filter.Operator.EQUAL.getNumber()) {
+						builder.addProperty(Entity.Index.Property.newBuilder()
+							.setName(filter.getName())
+							.setDirection(Entity.Index.Property.Direction.ASCENDING));
+					} else {
+						this.hasInequalities = true;
+						if(inequalityprop != null && !filter.getName().equals(inequalityprop))
+							throw new RpcFailedError("Only one inequality property is permitted per query",
+									DatastoreV3.Error.ErrorCode.BAD_REQUEST.getNumber());
+						inequalityprop = filter.getName();
+					}
 				}
 			}
 			
@@ -123,8 +128,20 @@ public class QuerySpec {
 				bounds.add(filter.getValue());
 			}
 		}
-		if(inequalityBound != null)
+		if(inequalityBound != null) {
 			bounds.add(inequalityBound);
+		} else {
+			// Get the direction of the next field
+			if(iter.hasNext()) {
+				currentDirection = direction * (iter.next().getDirection()==Entity.Index.Property.Direction.ASCENDING?1:-1);
+			} else {
+				currentDirection = 1;
+			}
+			if(currentDirection == -1) {
+				// Upper bound needs a delimiter
+				bounds.add(Entity.PropertyValue.getDefaultInstance());
+			}
+		}
 		return exclusiveBound;
 	}
 
@@ -143,8 +160,14 @@ public class QuerySpec {
 	public boolean hasAncestor() {
 		return ancestor != null;
 	}
+	
+	public boolean hasInequalities() {
+		if(this.index == null)
+			this.getIndex();
+		return this.hasInequalities;
+	}
 
-	public List<FilterSpec> getFilters() {
+	public Map<ByteString, List<FilterSpec>> getFilters() {
 		return filters;
 	}
 

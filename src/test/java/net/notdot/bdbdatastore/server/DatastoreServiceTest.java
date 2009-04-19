@@ -743,4 +743,57 @@ public class DatastoreServiceTest {
 		
 		assertEquals(2, query_done.getValue().getResultCount());
 	}
+	
+	@Test
+	public void testCompositeIndexOrdering() {
+		Indexing.CompositeIndexKey keyA = Indexing.CompositeIndexKey.newBuilder()
+			.addValue(Entity.PropertyValue.newBuilder()
+				.setStringValue(ByteString.copyFromUtf8("aaa")))
+			.addValue(Entity.PropertyValue.newBuilder()
+				.setInt64Value(2))
+			.build();
+		Indexing.CompositeIndexKey key3 = Indexing.CompositeIndexKey.newBuilder()
+			.addValue(Entity.PropertyValue.newBuilder()
+				.setStringValue(ByteString.copyFromUtf8("foo")))
+			.addValue(Entity.PropertyValue.newBuilder()
+				.setInt64Value(3))
+			.build();
+		Indexing.CompositeIndexKey key5 = Indexing.CompositeIndexKey.newBuilder()
+			.addValue(Entity.PropertyValue.newBuilder()
+				.setStringValue(ByteString.copyFromUtf8("foo")))
+			.addValue(Entity.PropertyValue.newBuilder()
+				.setInt64Value(5))
+			.build();
+		Indexing.CompositeIndexKey keyPrefix = Indexing.CompositeIndexKey.newBuilder()
+			.addValue(Entity.PropertyValue.newBuilder()
+				.setStringValue(ByteString.copyFromUtf8("foo")))
+			.build();
+		Indexing.CompositeIndexKey keyLast = Indexing.CompositeIndexKey.newBuilder()
+			.addValue(Entity.PropertyValue.newBuilder()
+				.setStringValue(ByteString.copyFromUtf8("foo")))
+			.addValue(Entity.PropertyValue.getDefaultInstance())
+			.build();
+		Indexing.CompositeIndexKey keyZ = Indexing.CompositeIndexKey.newBuilder()
+		.addValue(Entity.PropertyValue.newBuilder()
+			.setStringValue(ByteString.copyFromUtf8("zzz")))
+		.addValue(Entity.PropertyValue.newBuilder()
+			.setInt64Value(10))
+		.build();
+		
+		CompositeIndexKeyComparator comparator = new CompositeIndexKeyComparator(new int[] { 1, 1 }, false);
+		assertTrue(comparator.compare(keyA, key3) < 0);
+		assertTrue(comparator.compare(key3, key3) == 0);
+		assertTrue(comparator.compare(key3, key5) < 0);
+		assertTrue(comparator.compare(keyPrefix, key3) < 0);
+		assertTrue(comparator.compare(key5, keyLast) < 0);
+		assertTrue(comparator.compare(keyZ, keyLast) > 0);
+		
+		comparator = new CompositeIndexKeyComparator(new int[] { 1, -1 }, false);
+		assertTrue(comparator.compare(keyA, key3) < 0);
+		assertTrue(comparator.compare(key3, key3) == 0);
+		assertTrue(comparator.compare(key3, key5) > 0);
+		assertTrue(comparator.compare(keyPrefix, key3) > 0);
+		assertTrue(comparator.compare(key5, keyLast) > 0);
+		assertTrue(comparator.compare(keyZ, keyLast) > 0);
+	}
 }
