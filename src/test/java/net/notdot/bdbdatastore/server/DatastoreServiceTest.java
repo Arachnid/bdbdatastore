@@ -730,7 +730,7 @@ public class DatastoreServiceTest {
 				.setProperty(ByteString.copyFromUtf8("num"))
 				.setDirection(DatastoreV3.Query.Order.Direction.DESCENDING.getNumber()))
 			.build());
-		resultSets.add(new String[] { "a", "b", "a", "b" });
+		resultSets.add(new String[] { "a", "b" });
 		
 		queries.add(DatastoreV3.Query.newBuilder()
 			.setApp("testapp")
@@ -748,7 +748,7 @@ public class DatastoreServiceTest {
 				.setProperty(ByteString.copyFromUtf8("num"))
 				.setDirection(DatastoreV3.Query.Order.Direction.DESCENDING.getNumber()))
 			.build());
-		resultSets.add(new String[] { "foo", "baz", "foo", "baz" });
+		resultSets.add(new String[] { "foo", "baz" });
 		
 		for(int i = 0; i < queries.size(); i++) {
 			DatastoreV3.Query query = queries.get(i);

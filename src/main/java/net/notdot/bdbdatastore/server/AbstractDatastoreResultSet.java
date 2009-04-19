@@ -1,7 +1,9 @@
 package net.notdot.bdbdatastore.server;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +19,7 @@ public abstract class AbstractDatastoreResultSet {
 	
 	protected boolean started = false;
 	protected int remaining = -1;
+	protected Set<Entity.Reference> seen = new HashSet<Entity.Reference>();
 
 	public AbstractDatastoreResultSet(QuerySpec query) throws DatabaseException {
 		this.query = query;
@@ -43,13 +46,17 @@ public abstract class AbstractDatastoreResultSet {
 	public List<Entity.EntityProto> getNext(int count) throws DatabaseException {
 		List<Entity.EntityProto> entities = new ArrayList<Entity.EntityProto>(count);
 		
-		for(int i = 0; i < count; i++) {
+		while(count > 0) {
 			Entity.EntityProto ent = this.getNext();
 			if(ent == null) {
 				remaining = 0;
 				break;
 			}
-			entities.add(ent);
+			if(!this.seen.contains(ent.getKey())) {
+				entities.add(ent);
+				this.seen.add(ent.getKey());
+				count--;
+			}
 		}
 		
 		return entities;
