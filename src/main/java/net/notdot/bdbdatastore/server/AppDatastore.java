@@ -242,11 +242,6 @@ public class AppDatastore {
 	}
 	
 	public Reference put(EntityProto entity, Transaction tx) throws DatabaseException {
-		// Sort the properties for easy filtering on retrieval.
-		List<Property> properties = new ArrayList<Property>(entity.getPropertyList());
-		Collections.sort(properties, PropertyComparator.instance);
-		entity = Entity.EntityProto.newBuilder(entity).clearProperty().addAllProperty(properties).build();
-		
 		// Generate and set the ID if necessary.
 		Reference ref = entity.getKey();
 		int pathLen = ref.getPath().getElementCount();
