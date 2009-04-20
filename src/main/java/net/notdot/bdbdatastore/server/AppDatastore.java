@@ -20,8 +20,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.appengine.base.ApiBase;
+import com.google.appengine.datastore_v3.DatastoreV3;
+import com.google.appengine.datastore_v3.DatastoreV3.CompositeIndices;
 import com.google.appengine.datastore_v3.DatastoreV3.Query;
 import com.google.appengine.entity.Entity;
+import com.google.appengine.entity.Entity.CompositeIndex;
 import com.google.appengine.entity.Entity.EntityProto;
 import com.google.appengine.entity.Entity.Path;
 import com.google.appengine.entity.Entity.Property;
@@ -446,5 +449,44 @@ public class AppDatastore {
 		Indexing.EntityKey startKey = Indexing.EntityKey.newBuilder().setKind(query.getKind()).build();
 		MessagePredicate predicate = new KeyPredicate(startKey);
 		return new DatastoreResultSet(cursor, startKey, false, query, predicate);
+	}
+
+	public boolean deleteIndex(CompositeIndex idx) throws DatabaseException {
+		Entity.Index idxDef = idx.getDefinition();
+		
+		SecondaryDatabase idxDb;
+		synchronized(this.index_ids) {
+			Long index_id = this.index_ids.get(idxDef);
+			if(index_id == null || index_id.longValue() != idx.getId())
+				return false;
+			idxDb = this.indexes.get(idxDef);
+			if(idxDb == null)
+				return false;
+			this.index_ids.remove(idxDef);
+			this.indexes.remove(idxDef);
+		}
+		
+		// TODO: There's a potential synchronization issue here - what if the index is being queried when we delete it?
+		idxDb.close();
+		return true;
+	}
+
+	public CompositeIndices getIndices() {
+		DatastoreV3.CompositeIndices.Builder response = DatastoreV3.CompositeIndices.newBuilder();
+		synchronized(this.index_ids) {
+			for(Map.Entry<Entity.Index, Long> entry : this.index_ids.entrySet()) {
+				Entity.CompositeIndex.Builder index = Entity.CompositeIndex.newBuilder();
+				index.setAppId(this.app_id);
+				index.setId(entry.getValue());
+				index.setDefinition(entry.getKey());
+				if(this.indexes.containsKey(entry.getKey())) {
+					index.setState(Entity.CompositeIndex.State.READ_WRITE);
+				} else {
+					index.setState(Entity.CompositeIndex.State.WRITE_ONLY);
+				}
+				response.addIndex(index);
+			}
+		}
+		return response.build();
 	}
 }

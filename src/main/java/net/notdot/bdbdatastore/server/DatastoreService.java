@@ -247,8 +247,17 @@ public class DatastoreService extends
 	@Override
 	public void deleteIndex(RpcController controller, CompositeIndex request,
 			RpcCallback<VoidProto> done) {
-		// TODO Auto-generated method stub
-
+		String app_id = request.getAppId();
+		AppDatastore ds = this.datastore.getAppDatastore(app_id);
+		try {
+			if(!ds.deleteIndex(request))
+				throw new RpcFailedError(String.format("Could not delete index %d: Not found or still building.", request.getId()),
+						DatastoreV3.Error.ErrorCode.BAD_REQUEST.getNumber());
+			ds.saveCompositeIndexes();
+			done.run(ApiBase.VoidProto.getDefaultInstance());
+		} catch (Exception ex) {
+			throw new RpcFailedError(ex, DatastoreV3.Error.ErrorCode.INTERNAL_ERROR.getNumber());
+		}
 	}
 
 	@Override
@@ -297,8 +306,9 @@ public class DatastoreService extends
 	@Override
 	public void getIndices(RpcController controller, StringProto request,
 			RpcCallback<CompositeIndices> done) {
-		// TODO Auto-generated method stub
-
+		AppDatastore ds = this.datastore.getAppDatastore(request.getValue());
+		DatastoreV3.CompositeIndices response = ds.getIndices();
+		done.run(response);
 	}
 
 	@Override

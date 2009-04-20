@@ -656,10 +656,20 @@ public class DatastoreServiceTest {
 	public void testCompositeIndexGeneration() throws ParseException, FileNotFoundException, IOException, DatabaseException {
 		RpcController controller = new ProtoRpcController();
 		
-		TestRpcCallback<ApiBase.Integer64Proto> done = new TestRpcCallback<ApiBase.Integer64Proto>();
-		service.createIndex(controller, compositeIdx, done);
+		TestRpcCallback<ApiBase.Integer64Proto> create_done = new TestRpcCallback<ApiBase.Integer64Proto>();
+		service.createIndex(controller, compositeIdx, create_done);
+		assertTrue(create_done.isCalled());
 		
 		loadCorpus();
+		
+		TestRpcCallback<DatastoreV3.CompositeIndices> list_done = new TestRpcCallback<DatastoreV3.CompositeIndices>();
+		controller = new ProtoRpcController();
+		service.getIndices(controller, ApiBase.StringProto.newBuilder().setValue("testapp").build(), list_done);
+		assertTrue(list_done.isCalled());
+		assertEquals(1, list_done.getValue().getIndexCount());
+		assertEquals(1, list_done.getValue().getIndex(0).getId());
+		assertEquals(Entity.CompositeIndex.State.READ_WRITE, list_done.getValue().getIndex(0).getState());
+		assertEquals(compositeIdx.getDefinition(), list_done.getValue().getIndex(0).getDefinition());
 		
 		Object[] keyNames = new Object[] { "a", "b", "a", "b" };
 		
@@ -677,6 +687,11 @@ public class DatastoreServiceTest {
 		assertArrayEquals(keyNames, resultNames.toArray());
 		
 		cur.close();
+		
+		TestRpcCallback<ApiBase.VoidProto> delete_done = new TestRpcCallback<ApiBase.VoidProto>();
+		controller = new ProtoRpcController();
+		service.deleteIndex(controller, list_done.getValue().getIndex(0), delete_done);
+		assertTrue(delete_done.isCalled());
 	}
 	
 	@Test
