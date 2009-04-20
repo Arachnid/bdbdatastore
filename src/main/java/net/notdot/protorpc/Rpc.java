@@ -32,13 +32,25 @@ public final class Rpc {
       return net.notdot.protorpc.Rpc.internal_static_net_notdot_protorpc_Request_fieldAccessorTable;
     }
     
-    // required string method = 1;
+    // required int64 rpc_id = 1;
+    private boolean hasRpcId;
+    private long rpcId_ = 0L;
+    public boolean hasRpcId() { return hasRpcId; }
+    public long getRpcId() { return rpcId_; }
+    
+    // required string service = 2;
+    private boolean hasService;
+    private java.lang.String service_ = "";
+    public boolean hasService() { return hasService; }
+    public java.lang.String getService() { return service_; }
+    
+    // required string method = 3;
     private boolean hasMethod;
     private java.lang.String method_ = "";
     public boolean hasMethod() { return hasMethod; }
     public java.lang.String getMethod() { return method_; }
     
-    // required bytes body = 2;
+    // required bytes body = 4;
     private boolean hasBody;
     private com.google.protobuf.ByteString body_ = com.google.protobuf.ByteString.EMPTY;
     public boolean hasBody() { return hasBody; }
@@ -154,7 +166,43 @@ public final class Rpc {
       }
       
       
-      // required string method = 1;
+      // required int64 rpc_id = 1;
+      public boolean hasRpcId() {
+        return result.hasRpcId();
+      }
+      public long getRpcId() {
+        return result.getRpcId();
+      }
+      public Builder setRpcId(long value) {
+        result.hasRpcId = true;
+        result.rpcId_ = value;
+        return this;
+      }
+      public Builder clearRpcId() {
+        result.hasRpcId = false;
+        result.rpcId_ = 0L;
+        return this;
+      }
+      
+      // required string service = 2;
+      public boolean hasService() {
+        return result.hasService();
+      }
+      public java.lang.String getService() {
+        return result.getService();
+      }
+      public Builder setService(java.lang.String value) {
+        result.hasService = true;
+        result.service_ = value;
+        return this;
+      }
+      public Builder clearService() {
+        result.hasService = false;
+        result.service_ = "";
+        return this;
+      }
+      
+      // required string method = 3;
       public boolean hasMethod() {
         return result.hasMethod();
       }
@@ -172,7 +220,7 @@ public final class Rpc {
         return this;
       }
       
-      // required bytes body = 2;
+      // required bytes body = 4;
       public boolean hasBody() {
         return result.hasBody();
       }
@@ -291,25 +339,31 @@ public final class Rpc {
       }
     }
     
-    // required .net.notdot.protorpc.Response.ResponseType status = 1 [default = OK];
+    // required int64 rpc_id = 1;
+    private boolean hasRpcId;
+    private long rpcId_ = 0L;
+    public boolean hasRpcId() { return hasRpcId; }
+    public long getRpcId() { return rpcId_; }
+    
+    // required .net.notdot.protorpc.Response.ResponseType status = 2 [default = OK];
     private boolean hasStatus;
     private net.notdot.protorpc.Rpc.Response.ResponseType status_ = net.notdot.protorpc.Rpc.Response.ResponseType.OK;
     public boolean hasStatus() { return hasStatus; }
     public net.notdot.protorpc.Rpc.Response.ResponseType getStatus() { return status_; }
     
-    // optional bytes body = 2;
+    // optional bytes body = 3;
     private boolean hasBody;
     private com.google.protobuf.ByteString body_ = com.google.protobuf.ByteString.EMPTY;
     public boolean hasBody() { return hasBody; }
     public com.google.protobuf.ByteString getBody() { return body_; }
     
-    // optional string error_detail = 3;
+    // optional string error_detail = 4;
     private boolean hasErrorDetail;
     private java.lang.String errorDetail_ = "";
     public boolean hasErrorDetail() { return hasErrorDetail; }
     public java.lang.String getErrorDetail() { return errorDetail_; }
     
-    // optional int32 application_error = 4;
+    // optional int32 application_error = 5;
     private boolean hasApplicationError;
     private int applicationError_ = 0;
     public boolean hasApplicationError() { return hasApplicationError; }
@@ -425,7 +479,25 @@ public final class Rpc {
       }
       
       
-      // required .net.notdot.protorpc.Response.ResponseType status = 1 [default = OK];
+      // required int64 rpc_id = 1;
+      public boolean hasRpcId() {
+        return result.hasRpcId();
+      }
+      public long getRpcId() {
+        return result.getRpcId();
+      }
+      public Builder setRpcId(long value) {
+        result.hasRpcId = true;
+        result.rpcId_ = value;
+        return this;
+      }
+      public Builder clearRpcId() {
+        result.hasRpcId = false;
+        result.rpcId_ = 0L;
+        return this;
+      }
+      
+      // required .net.notdot.protorpc.Response.ResponseType status = 2 [default = OK];
       public boolean hasStatus() {
         return result.hasStatus();
       }
@@ -443,7 +515,7 @@ public final class Rpc {
         return this;
       }
       
-      // optional bytes body = 2;
+      // optional bytes body = 3;
       public boolean hasBody() {
         return result.hasBody();
       }
@@ -461,7 +533,7 @@ public final class Rpc {
         return this;
       }
       
-      // optional string error_detail = 3;
+      // optional string error_detail = 4;
       public boolean hasErrorDetail() {
         return result.hasErrorDetail();
       }
@@ -479,7 +551,7 @@ public final class Rpc {
         return this;
       }
       
-      // optional int32 application_error = 4;
+      // optional int32 application_error = 5;
       public boolean hasApplicationError() {
         return result.hasApplicationError();
       }
@@ -522,17 +594,19 @@ public final class Rpc {
       descriptor;
   static {
     java.lang.String descriptorData =
-      "\n\trpc.proto\022\023net.notdot.protorpc\"\'\n\007Requ" +
-      "est\022\016\n\006method\030\001 \002(\t\022\014\n\004body\030\002 \002(\014\"\350\002\n\010Re" +
-      "sponse\022>\n\006status\030\001 \002(\0162*.net.notdot.prot" +
-      "orpc.Response.ResponseType:\002OK\022\014\n\004body\030\002" +
-      " \001(\014\022\024\n\014error_detail\030\003 \001(\t\022\031\n\021applicatio" +
-      "n_error\030\004 \001(\005\"\334\001\n\014ResponseType\022\006\n\002OK\020\000\022\016" +
-      "\n\nRPC_FAILED\020\001\022\022\n\016CALL_NOT_FOUND\020\002\022\022\n\016AR" +
-      "GUMENT_ERROR\020\003\022\025\n\021DEADLINE_EXCEEDED\020\004\022\r\n" +
-      "\tCANCELLED\020\005\022\025\n\021APPLICATION_ERROR\020\006\022\017\n\013O" +
-      "THER_ERROR\020\007\022\016\n\nOVER_QUOTA\020\010\022\025\n\021REQUEST_" +
-      "TOO_LARGE\020\t\022\027\n\023CAPABILITY_DISABLED\020\n";
+      "\n\trpc.proto\022\023net.notdot.protorpc\"H\n\007Requ" +
+      "est\022\016\n\006rpc_id\030\001 \002(\003\022\017\n\007service\030\002 \002(\t\022\016\n\006" +
+      "method\030\003 \002(\t\022\014\n\004body\030\004 \002(\014\"\370\002\n\010Response\022" +
+      "\016\n\006rpc_id\030\001 \002(\003\022>\n\006status\030\002 \002(\0162*.net.no" +
+      "tdot.protorpc.Response.ResponseType:\002OK\022" +
+      "\014\n\004body\030\003 \001(\014\022\024\n\014error_detail\030\004 \001(\t\022\031\n\021a" +
+      "pplication_error\030\005 \001(\005\"\334\001\n\014ResponseType\022" +
+      "\006\n\002OK\020\000\022\016\n\nRPC_FAILED\020\001\022\022\n\016CALL_NOT_FOUN" +
+      "D\020\002\022\022\n\016ARGUMENT_ERROR\020\003\022\025\n\021DEADLINE_EXCE" +
+      "EDED\020\004\022\r\n\tCANCELLED\020\005\022\025\n\021APPLICATION_ERR" +
+      "OR\020\006\022\017\n\013OTHER_ERROR\020\007\022\016\n\nOVER_QUOTA\020\010\022\025\n" +
+      "\021REQUEST_TOO_LARGE\020\t\022\027\n\023CAPABILITY_DISAB" +
+      "LED\020\n";
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
@@ -543,7 +617,7 @@ public final class Rpc {
           internal_static_net_notdot_protorpc_Request_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_net_notdot_protorpc_Request_descriptor,
-              new java.lang.String[] { "Method", "Body", },
+              new java.lang.String[] { "RpcId", "Service", "Method", "Body", },
               net.notdot.protorpc.Rpc.Request.class,
               net.notdot.protorpc.Rpc.Request.Builder.class);
           internal_static_net_notdot_protorpc_Response_descriptor =
@@ -551,7 +625,7 @@ public final class Rpc {
           internal_static_net_notdot_protorpc_Response_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_net_notdot_protorpc_Response_descriptor,
-              new java.lang.String[] { "Status", "Body", "ErrorDetail", "ApplicationError", },
+              new java.lang.String[] { "RpcId", "Status", "Body", "ErrorDetail", "ApplicationError", },
               net.notdot.protorpc.Rpc.Response.class,
               net.notdot.protorpc.Rpc.Response.Builder.class);
           return null;

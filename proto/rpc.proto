@@ -1,8 +1,10 @@
 package net.notdot.protorpc;
 
 message Request {
-  required string method = 1;
-  required bytes body = 2;
+  required int64 rpc_id = 1;
+  required string service = 2;
+  required string method = 3;
+  required bytes body = 4;
 }
 
 message Response {
@@ -20,8 +22,9 @@ message Response {
     CAPABILITY_DISABLED = 10;
   }
   
-  required ResponseType status = 1 [default=OK];
-  optional bytes body = 2;
-  optional string error_detail = 3;
-  optional int32 application_error = 4;
+  required int64 rpc_id = 1;
+  required ResponseType status = 2 [default=OK];
+  optional bytes body = 3;
+  optional string error_detail = 4;
+  optional int32 application_error = 5;
 }

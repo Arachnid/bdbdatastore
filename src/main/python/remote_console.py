@@ -20,7 +20,7 @@ if len(sys.argv) > 3:
   port = int(sys.argv[3])
 
 os.environ['APPLICATION_ID'] = app_id
-datastore_stub = socket_apiproxy_stub.SocketApiProxyStub('datastore_v3', (host, port))
+datastore_stub = socket_apiproxy_stub.SocketApiProxyStub((host, port))
 apiproxy_stub_map.apiproxy.RegisterStub('datastore_v3', datastore_stub)
 
 code.interact('App Engine interactive console for %s' % (app_id,), None, locals())

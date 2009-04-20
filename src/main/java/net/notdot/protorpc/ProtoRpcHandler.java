@@ -21,14 +21,17 @@ public class ProtoRpcHandler extends SimpleChannelHandler {
 	protected class ProtoRpcCallback implements RpcCallback<Message> {
 		protected Channel channel = null;
 		protected boolean called = false;
+		protected long rpcId;
 		
-		protected ProtoRpcCallback(Channel ch) {
+		protected ProtoRpcCallback(Channel ch, long rpcId) {
 			this.channel = ch;
+			this.rpcId = rpcId;
 		}
 		
 		public void run(Message arg0) {
 			if(!called) {
 				Rpc.Response response = Rpc.Response.newBuilder()
+					.setRpcId(this.rpcId)
 					.setStatus(Rpc.Response.ResponseType.OK)
 					.setBody(arg0.toByteString()).build();
 				this.channel.write(response);
@@ -69,6 +72,8 @@ public class ProtoRpcHandler extends SimpleChannelHandler {
 			throws Exception {
 		Channel ch = e.getChannel();
 		Rpc.Request request = (Rpc.Request) e.getMessage();
+		
+		// For now we ignore the service name in the message.
 
 		MethodDescriptor method = service.getDescriptorForType().findMethodByName(request.getMethod());
 		if(method == null) {
@@ -84,7 +89,7 @@ public class ProtoRpcHandler extends SimpleChannelHandler {
 			return;
 		}
 
-		ProtoRpcCallback callback = new ProtoRpcCallback(ch);
+		ProtoRpcCallback callback = new ProtoRpcCallback(ch, request.getRpcId());
 		ProtoRpcController controller = new ProtoRpcController();
 		try {
 			service.callMethod(method, controller, request_data, callback);
@@ -98,11 +103,13 @@ public class ProtoRpcHandler extends SimpleChannelHandler {
 		if(!callback.isCalled()) {
 			if(controller.failed()) {
 				ch.write(Rpc.Response.newBuilder()
+						.setRpcId(request.getRpcId())
 						.setStatus(Rpc.Response.ResponseType.APPLICATION_ERROR)
 						.setErrorDetail(controller.errorText())
 						.setApplicationError(controller.getApplicationError()).build());
 			} else {
 				ch.write(Rpc.Response.newBuilder()
+						.setRpcId(request.getRpcId())
 						.setStatus(Rpc.Response.ResponseType.RPC_FAILED)
 						.setErrorDetail("RPC handler failed to issue a response").build());
 			}

@@ -6,11 +6,11 @@ MAX_REQUEST_SIZE = 1 << 20
 
 
 class SocketApiProxyStub(object):
-  def __init__(self, service_name, endpoint, max_request_size=MAX_REQUEST_SIZE):
-    self._service_name = service_name
+  def __init__(self, endpoint, max_request_size=MAX_REQUEST_SIZE):
     self._endpoint = endpoint
     self._max_request_size = max_request_size
     self._sock = None
+    self._next_rpc_id = 0
   
   def closeSession(self):
     self._sock.close()
@@ -25,16 +25,20 @@ class SocketApiProxyStub(object):
     pb.MergeFromString(data)
     return pb
 
-  def _sendRPC(self, method, request, response):
+  def _sendRPC(self, service, method, request, response):
     for i in range(5):
       try:
         request_wrapper = rpc_pb2.Request()
+        request_wrapper.rpc_id = self._next_rpc_id
+        self._next_rpc_id += 1
+        request_wrapper.service = service
         request_wrapper.method = method
         request_wrapper.body = request.Encode()
         self._writePB(request_wrapper)
         
         response_wrapper = rpc_pb2.Response()
         self._readPB(response_wrapper)
+        assert response_wrapper.rpc_id == request_wrapper.rpc_id
         assert response_wrapper.status == rpc_pb2.Response.OK
         response.ParseFromString(response_wrapper.body)
         return
@@ -43,10 +47,8 @@ class SocketApiProxyStub(object):
           raise
   
   def MakeSyncCall(self, service, call, request, response):
-    assert service == self._service_name
-    
     if not self._sock:
       self._sock = socket.socket()
       self._sock.connect(self._endpoint)
     
-    self._sendRPC(call, request, response)
+    self._sendRPC(service, call, request, response)
