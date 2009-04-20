@@ -2,7 +2,52 @@ import rpc_pb2
 import socket
 import struct
 
+from google.appengine.runtime import apiproxy_errors
+
 MAX_REQUEST_SIZE = 1 << 20
+
+# Stolen from google.appengine.runtime.apiproxy
+OK                =  0
+RPC_FAILED        =  1
+CALL_NOT_FOUND    =  2
+ARGUMENT_ERROR    =  3
+DEADLINE_EXCEEDED =  4
+CANCELLED         =  5
+APPLICATION_ERROR =  6
+OTHER_ERROR       =  7
+OVER_QUOTA        =  8
+REQUEST_TOO_LARGE =  9
+CAPABILITY_DISABLED = 10
+
+_ExceptionsMap = {
+  RPC_FAILED:
+  (apiproxy_errors.RPCFailedError,
+   "The remote RPC to the application server failed for the call %s.%s()."),
+  CALL_NOT_FOUND:
+  (apiproxy_errors.CallNotFoundError,
+   "The API package '%s' or call '%s()' was not found."),
+  ARGUMENT_ERROR:
+  (apiproxy_errors.ArgumentError,
+   "An error occurred parsing (locally or remotely) the arguments to %s.%s()."),
+  DEADLINE_EXCEEDED:
+  (apiproxy_errors.DeadlineExceededError,
+   "The API call %s.%s() took too long to respond and was cancelled."),
+  CANCELLED:
+  (apiproxy_errors.CancelledError,
+   "The API call %s.%s() was explicitly cancelled."),
+  OTHER_ERROR:
+  (apiproxy_errors.Error,
+   "An error occurred for the API request %s.%s()."),
+  OVER_QUOTA:
+  (apiproxy_errors.OverQuotaError,
+  "The API call %s.%s() required more quota than is available."),
+  REQUEST_TOO_LARGE:
+  (apiproxy_errors.RequestTooLargeError,
+  "The request to API call %s.%s() was too large."),
+  CAPABILITY_DISABLED:
+  (apiproxy_errors.CapabilityDisabledError,
+  "The API call %s.%s() is temporarily unavailable."),
+}
 
 
 class SocketApiProxyStub(object):
@@ -39,9 +84,16 @@ class SocketApiProxyStub(object):
         response_wrapper = rpc_pb2.Response()
         self._readPB(response_wrapper)
         assert response_wrapper.rpc_id == request_wrapper.rpc_id
-        assert response_wrapper.status == rpc_pb2.Response.OK
-        response.ParseFromString(response_wrapper.body)
-        return
+        
+        if response_wrapper.status == APPLICATION_ERROR:
+          raise apiproxy_errors.ApplicationError(
+              response_wrapper.application_error,
+              response_wrapper.error_detail)
+        elif response_wrapper.status in _ExceptionsMap:
+          ex, message = _ExceptionsMap[response_wrapper.status]
+          raise ex(message % (service, method))
+        else:
+          response.ParseFromString(response_wrapper.body)
       except socket.error, e:
         if e.args[0] != 54:
           raise
