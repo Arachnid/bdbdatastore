@@ -36,6 +36,7 @@ public class ProtoRpcHandler extends SimpleChannelHandler {
 					.setBody(arg0.toByteString()).build();
 				this.channel.write(response);
 				called = true;
+				logger.trace("Response to RPC {}: {}", this.rpcId, arg0);
 			}
 		}
 
@@ -72,7 +73,7 @@ public class ProtoRpcHandler extends SimpleChannelHandler {
 			throws Exception {
 		Channel ch = e.getChannel();
 		Rpc.Request request = (Rpc.Request) e.getMessage();
-		
+				
 		// For now we ignore the service name in the message.
 
 		MethodDescriptor method = service.getDescriptorForType().findMethodByName(request.getMethod());
@@ -88,6 +89,10 @@ public class ProtoRpcHandler extends SimpleChannelHandler {
 			ch.write(Rpc.Response.newBuilder().setStatus(Rpc.Response.ResponseType.ARGUMENT_ERROR).build());
 			return;
 		}
+
+		logger.trace("Handling RPC {} for {}.{}. Request: {}",
+				new Object[] { request.getRpcId(), request.getService(),
+				               request.getMethod(), request_data});
 
 		ProtoRpcCallback callback = new ProtoRpcCallback(ch, request.getRpcId());
 		ProtoRpcController controller = new ProtoRpcController();

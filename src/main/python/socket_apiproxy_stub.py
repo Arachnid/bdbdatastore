@@ -71,32 +71,31 @@ class SocketApiProxyStub(object):
     return pb
 
   def _sendRPC(self, service, method, request, response):
-    for i in range(5):
-      try:
-        request_wrapper = rpc_pb2.Request()
-        request_wrapper.rpc_id = self._next_rpc_id
-        self._next_rpc_id += 1
-        request_wrapper.service = service
-        request_wrapper.method = method
-        request_wrapper.body = request.Encode()
-        self._writePB(request_wrapper)
-        
-        response_wrapper = rpc_pb2.Response()
-        self._readPB(response_wrapper)
-        assert response_wrapper.rpc_id == request_wrapper.rpc_id
-        
-        if response_wrapper.status == APPLICATION_ERROR:
-          raise apiproxy_errors.ApplicationError(
-              response_wrapper.application_error,
-              response_wrapper.error_detail)
-        elif response_wrapper.status in _ExceptionsMap:
-          ex, message = _ExceptionsMap[response_wrapper.status]
-          raise ex(message % (service, method))
-        else:
-          response.ParseFromString(response_wrapper.body)
-      except socket.error, e:
-        if e.args[0] != 54:
-          raise
+    try:
+      request_wrapper = rpc_pb2.Request()
+      request_wrapper.rpc_id = self._next_rpc_id
+      self._next_rpc_id += 1
+      request_wrapper.service = service
+      request_wrapper.method = method
+      request_wrapper.body = request.Encode()
+      self._writePB(request_wrapper)
+      
+      response_wrapper = rpc_pb2.Response()
+      self._readPB(response_wrapper)
+      assert response_wrapper.rpc_id == request_wrapper.rpc_id
+      
+      if response_wrapper.status == APPLICATION_ERROR:
+        raise apiproxy_errors.ApplicationError(
+            response_wrapper.application_error,
+            response_wrapper.error_detail)
+      elif response_wrapper.status in _ExceptionsMap:
+        ex, message = _ExceptionsMap[response_wrapper.status]
+        raise ex(message % (service, method))
+      else:
+        response.ParseFromString(response_wrapper.body)
+    except socket.error, e:
+      self.closeSession()
+      raise
   
   def MakeSyncCall(self, service, call, request, response):
     if not self._sock:
