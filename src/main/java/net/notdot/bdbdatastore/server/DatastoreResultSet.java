@@ -4,6 +4,8 @@ package net.notdot.bdbdatastore.server;
 
 import java.util.Arrays;
 
+import net.notdot.bdbdatastore.Indexing;
+
 import com.google.appengine.entity.Entity;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
@@ -72,7 +74,7 @@ public class DatastoreResultSet extends AbstractDatastoreResultSet {
 					if(!this.predicate.evaluate(keyent))
 						return null;
 				}
-				return Entity.EntityProto.parseFrom(value.getData());
+				return Indexing.EntityData.parseFrom(value.getData()).getData();
 			} catch(InvalidProtocolBufferException ex) {
 				//TODO: Make this message more helpful somehow.
 				logger.error("Invalid protocol buffer encountered");

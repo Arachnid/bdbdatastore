@@ -7,6 +7,211 @@ public final class Indexing {
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistry registry) {
   }
+  public static final class EntityData extends
+      com.google.protobuf.GeneratedMessage {
+    // Use EntityData.newBuilder() to construct.
+    private EntityData() {}
+    
+    private static final EntityData defaultInstance = new EntityData();
+    public static EntityData getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public EntityData getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return net.notdot.bdbdatastore.Indexing.internal_static_net_notdot_bdbdatastore_EntityData_descriptor;
+    }
+    
+    @Override
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return net.notdot.bdbdatastore.Indexing.internal_static_net_notdot_bdbdatastore_EntityData_fieldAccessorTable;
+    }
+    
+    // required .com.google.appengine.entity.EntityProto data = 1;
+    private boolean hasData;
+    private com.google.appengine.entity.Entity.EntityProto data_ = com.google.appengine.entity.Entity.EntityProto.getDefaultInstance();
+    public boolean hasData() { return hasData; }
+    public com.google.appengine.entity.Entity.EntityProto getData() { return data_; }
+    
+    // required int64 update_id = 2;
+    private boolean hasUpdateId;
+    private long updateId_ = 0L;
+    public boolean hasUpdateId() { return hasUpdateId; }
+    public long getUpdateId() { return updateId_; }
+    
+    public static net.notdot.bdbdatastore.Indexing.EntityData parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static net.notdot.bdbdatastore.Indexing.EntityData parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistry extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static net.notdot.bdbdatastore.Indexing.EntityData parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static net.notdot.bdbdatastore.Indexing.EntityData parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistry extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static net.notdot.bdbdatastore.Indexing.EntityData parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static net.notdot.bdbdatastore.Indexing.EntityData parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistry extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static net.notdot.bdbdatastore.Indexing.EntityData parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static net.notdot.bdbdatastore.Indexing.EntityData parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistry extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return new Builder(); }
+    public Builder newBuilderForType() { return new Builder(); }
+    public static Builder newBuilder(net.notdot.bdbdatastore.Indexing.EntityData prototype) {
+      return new Builder().mergeFrom(prototype);
+    }
+    
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder> {
+      // Construct using net.notdot.bdbdatastore.Indexing.EntityData.newBuilder()
+      private Builder() {}
+      
+      net.notdot.bdbdatastore.Indexing.EntityData result = new net.notdot.bdbdatastore.Indexing.EntityData();
+      
+      @Override
+      protected net.notdot.bdbdatastore.Indexing.EntityData internalGetResult() {
+        return result;
+      }
+      
+      @Override
+      public Builder clear() {
+        result = new net.notdot.bdbdatastore.Indexing.EntityData();
+        return this;
+      }
+      
+      @Override
+      public Builder clone() {
+        return new Builder().mergeFrom(result);
+      }
+      
+      @Override
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return net.notdot.bdbdatastore.Indexing.EntityData.getDescriptor();
+      }
+      
+      public net.notdot.bdbdatastore.Indexing.EntityData getDefaultInstanceForType() {
+        return net.notdot.bdbdatastore.Indexing.EntityData.getDefaultInstance();
+      }
+      
+      public net.notdot.bdbdatastore.Indexing.EntityData build() {
+        if (!isInitialized()) {
+          throw new com.google.protobuf.UninitializedMessageException(
+            result);
+        }
+        return buildPartial();
+      }
+      
+      private net.notdot.bdbdatastore.Indexing.EntityData buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        if (!isInitialized()) {
+          throw new com.google.protobuf.UninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return buildPartial();
+      }
+      
+      public net.notdot.bdbdatastore.Indexing.EntityData buildPartial() {
+        net.notdot.bdbdatastore.Indexing.EntityData returnMe = result;
+        result = null;
+        return returnMe;
+      }
+      
+      
+      // required .com.google.appengine.entity.EntityProto data = 1;
+      public boolean hasData() {
+        return result.hasData();
+      }
+      public com.google.appengine.entity.Entity.EntityProto getData() {
+        return result.getData();
+      }
+      public Builder setData(com.google.appengine.entity.Entity.EntityProto value) {
+        result.hasData = true;
+        result.data_ = value;
+        return this;
+      }
+      public Builder setData(com.google.appengine.entity.Entity.EntityProto.Builder builderForValue) {
+        result.hasData = true;
+        result.data_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeData(com.google.appengine.entity.Entity.EntityProto value) {
+        if (result.hasData() &&
+            result.data_ != com.google.appengine.entity.Entity.EntityProto.getDefaultInstance()) {
+          result.data_ =
+            com.google.appengine.entity.Entity.EntityProto.newBuilder(result.data_).mergeFrom(value).buildPartial();
+        } else {
+          result.data_ = value;
+        }
+        result.hasData = true;
+        return this;
+      }
+      public Builder clearData() {
+        result.hasData = false;
+        result.data_ = com.google.appengine.entity.Entity.EntityProto.getDefaultInstance();
+        return this;
+      }
+      
+      // required int64 update_id = 2;
+      public boolean hasUpdateId() {
+        return result.hasUpdateId();
+      }
+      public long getUpdateId() {
+        return result.getUpdateId();
+      }
+      public Builder setUpdateId(long value) {
+        result.hasUpdateId = true;
+        result.updateId_ = value;
+        return this;
+      }
+      public Builder clearUpdateId() {
+        result.hasUpdateId = false;
+        result.updateId_ = 0L;
+        return this;
+      }
+    }
+    
+    static {
+      net.notdot.bdbdatastore.Indexing.getDescriptor();
+    }
+  }
+  
   public static final class EntityKey extends
       com.google.protobuf.GeneratedMessage {
     // Use EntityKey.newBuilder() to construct.
@@ -908,6 +1113,11 @@ public final class Indexing {
   }
   
   private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_net_notdot_bdbdatastore_EntityData_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_net_notdot_bdbdatastore_EntityData_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
     internal_static_net_notdot_bdbdatastore_EntityKey_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -937,24 +1147,35 @@ public final class Indexing {
   static {
     java.lang.String descriptorData =
       "\n\016indexing.proto\022\027net.notdot.bdbdatastor" +
-      "e\032\014entity.proto\032\016api_base.proto\"J\n\tEntit" +
-      "yKey\022\014\n\004kind\030\001 \002(\014\022/\n\004path\030\002 \001(\0132!.com.g" +
-      "oogle.appengine.entity.Path\"i\n\020PropertyI" +
-      "ndexKey\022\014\n\004kind\030\001 \002(\014\022\014\n\004name\030\002 \002(\014\0229\n\005v" +
-      "alue\030\003 \001(\0132*.com.google.appengine.entity" +
-      ".PropertyValue\"\203\001\n\021CompositeIndexKey\0223\n\010" +
-      "ancestor\030\001 \001(\0132!.com.google.appengine.en" +
-      "tity.Path\0229\n\005value\030\002 \003(\0132*.com.google.ap" +
-      "pengine.entity.PropertyValue\"X\n\tIndexLis" +
-      "t\022:\n\005index\030\001 \003(\0132+.com.google.appengine." +
-      "entity.CompositeIndex\022\017\n\007next_id\030\002 \002(\003";
+      "e\032\014entity.proto\032\016api_base.proto\"W\n\nEntit" +
+      "yData\0226\n\004data\030\001 \002(\0132(.com.google.appengi" +
+      "ne.entity.EntityProto\022\021\n\tupdate_id\030\002 \002(\003" +
+      "\"J\n\tEntityKey\022\014\n\004kind\030\001 \002(\014\022/\n\004path\030\002 \001(" +
+      "\0132!.com.google.appengine.entity.Path\"i\n\020" +
+      "PropertyIndexKey\022\014\n\004kind\030\001 \002(\014\022\014\n\004name\030\002" +
+      " \002(\014\0229\n\005value\030\003 \001(\0132*.com.google.appengi" +
+      "ne.entity.PropertyValue\"\203\001\n\021CompositeInd" +
+      "exKey\0223\n\010ancestor\030\001 \001(\0132!.com.google.app" +
+      "engine.entity.Path\0229\n\005value\030\002 \003(\0132*.com." +
+      "google.appengine.entity.PropertyValue\"X\n" +
+      "\tIndexList\022:\n\005index\030\001 \003(\0132+.com.google.a" +
+      "ppengine.entity.CompositeIndex\022\017\n\007next_i" +
+      "d\030\002 \002(\003";
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_net_notdot_bdbdatastore_EntityKey_descriptor =
+          internal_static_net_notdot_bdbdatastore_EntityData_descriptor =
             getDescriptor().getMessageTypes().get(0);
+          internal_static_net_notdot_bdbdatastore_EntityData_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_net_notdot_bdbdatastore_EntityData_descriptor,
+              new java.lang.String[] { "Data", "UpdateId", },
+              net.notdot.bdbdatastore.Indexing.EntityData.class,
+              net.notdot.bdbdatastore.Indexing.EntityData.Builder.class);
+          internal_static_net_notdot_bdbdatastore_EntityKey_descriptor =
+            getDescriptor().getMessageTypes().get(1);
           internal_static_net_notdot_bdbdatastore_EntityKey_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_net_notdot_bdbdatastore_EntityKey_descriptor,
@@ -962,7 +1183,7 @@ public final class Indexing {
               net.notdot.bdbdatastore.Indexing.EntityKey.class,
               net.notdot.bdbdatastore.Indexing.EntityKey.Builder.class);
           internal_static_net_notdot_bdbdatastore_PropertyIndexKey_descriptor =
-            getDescriptor().getMessageTypes().get(1);
+            getDescriptor().getMessageTypes().get(2);
           internal_static_net_notdot_bdbdatastore_PropertyIndexKey_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_net_notdot_bdbdatastore_PropertyIndexKey_descriptor,
@@ -970,7 +1191,7 @@ public final class Indexing {
               net.notdot.bdbdatastore.Indexing.PropertyIndexKey.class,
               net.notdot.bdbdatastore.Indexing.PropertyIndexKey.Builder.class);
           internal_static_net_notdot_bdbdatastore_CompositeIndexKey_descriptor =
-            getDescriptor().getMessageTypes().get(2);
+            getDescriptor().getMessageTypes().get(3);
           internal_static_net_notdot_bdbdatastore_CompositeIndexKey_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_net_notdot_bdbdatastore_CompositeIndexKey_descriptor,
@@ -978,7 +1199,7 @@ public final class Indexing {
               net.notdot.bdbdatastore.Indexing.CompositeIndexKey.class,
               net.notdot.bdbdatastore.Indexing.CompositeIndexKey.Builder.class);
           internal_static_net_notdot_bdbdatastore_IndexList_descriptor =
-            getDescriptor().getMessageTypes().get(3);
+            getDescriptor().getMessageTypes().get(4);
           internal_static_net_notdot_bdbdatastore_IndexList_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_net_notdot_bdbdatastore_IndexList_descriptor,

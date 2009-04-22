@@ -22,7 +22,7 @@ public class SinglePropertyIndexer implements SecondaryMultiKeyCreator {
 			DatabaseEntry data, Set<DatabaseEntry> results)
 			throws DatabaseException {
 		try {
-			Entity.EntityProto entity = Entity.EntityProto.parseFrom(data.getData());
+			Entity.EntityProto entity = Indexing.EntityData.parseFrom(data.getData()).getData();
 			Entity.Path path = entity.getKey().getPath();
 			ByteString kind = path.getElement(path.getElementCount() - 1).getType();
 			for(Entity.Property prop : entity.getPropertyList()) {

@@ -2,6 +2,8 @@ package net.notdot.bdbdatastore.server;
 
 
 
+import net.notdot.bdbdatastore.Indexing;
+
 import com.google.appengine.entity.Entity;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.sleepycat.je.Cursor;
@@ -48,7 +50,7 @@ public class JoinedDatastoreResultSet extends AbstractDatastoreResultSet {
 				return null;
 			
 			try {
-				return Entity.EntityProto.parseFrom(value.getData());
+				return Indexing.EntityData.parseFrom(value.getData()).getData();
 			} catch(InvalidProtocolBufferException ex) {
 				//TODO: Make this message more helpful somehow.
 				logger.error("Invalid protocol buffer encountered");

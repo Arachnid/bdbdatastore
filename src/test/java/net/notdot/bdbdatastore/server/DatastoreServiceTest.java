@@ -355,12 +355,12 @@ public class DatastoreServiceTest {
 		
 		cur.getFirst(key, data, null);
 		assertEquals(AppDatastore.toEntityKey(dataset_put.getEntity(0).getKey()), Indexing.EntityKey.parseFrom(key.getData()));
-		assertEquals(dataset_put.getEntity(0), Entity.EntityProto.parseFrom(data.getData()));
+		assertEquals(dataset_put.getEntity(0), Indexing.EntityData.parseFrom(data.getData()).getData());
 		
 		for(int i = 1; i < 4; i++) {
 			cur.getNext(key, data, null);
 			assertEquals(AppDatastore.toEntityKey(dataset_put.getEntity(i).getKey()), Indexing.EntityKey.parseFrom(key.getData()));
-			assertEquals(dataset_put.getEntity(i), Entity.EntityProto.parseFrom(data.getData()));
+			assertEquals(dataset_put.getEntity(i), Indexing.EntityData.parseFrom(data.getData()).getData());
 		}
 		
 		cur.close();
@@ -679,7 +679,7 @@ public class DatastoreServiceTest {
 		DatabaseEntry data = new DatabaseEntry();
 		
 		while(cur.getNext(key, data, null) == OperationStatus.SUCCESS) {
-			Entity.EntityProto entity = Entity.EntityProto.parseFrom(data.getData());
+			Entity.EntityProto entity = Indexing.EntityData.parseFrom(data.getData()).getData();
 			resultNames.add(entity.getKey().getPath().getElement(0).getName().toStringUtf8());
 		}
 

@@ -3,6 +3,12 @@ package net.notdot.bdbdatastore;
 import "entity.proto";
 import "api_base.proto";
 
+// Container proto for datastore entities
+message EntityData {
+  required com.google.appengine.entity.EntityProto data = 1;
+  required int64 update_id = 2; // Monotonically increasing update ID
+}
+
 // Index key for the Entities table
 message EntityKey {
   required bytes kind = 1;

@@ -41,7 +41,7 @@ public class CompositeIndexIndexer implements SecondaryMultiKeyCreator {
 			throws DatabaseException {
 		Entity.EntityProto entity;
 		try {
-			entity = Entity.EntityProto.parseFrom(data.getData());
+			entity = Indexing.EntityData.parseFrom(data.getData()).getData();
 		} catch (InvalidProtocolBufferException e) {
 			// TODO: Make this error message more useful somehow.
 			logger.error("Attempted to index invalid entity");
