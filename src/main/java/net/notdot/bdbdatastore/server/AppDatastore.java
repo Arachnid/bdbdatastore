@@ -89,6 +89,8 @@ public class AppDatastore {
 	 */
 	public AppDatastore(String basedir, String app_id)
 			throws EnvironmentLockedException, DatabaseException {
+		logger.info("Initializing datastore for app '{}'...", app_id);
+		
 		this.app_id = app_id;
 		
 		datastore_dir = new File(basedir, app_id);
@@ -100,14 +102,17 @@ public class AppDatastore {
 		envconfig.setSharedCache(true);
 		env = new Environment(datastore_dir, envconfig);
 		
+		logger.info("  {}: Opening entities table", app_id);
 		DatabaseConfig dbconfig = new DatabaseConfig();
 		dbconfig.setAllowCreate(true);
 		dbconfig.setTransactional(true);
 		dbconfig.setBtreeComparator(SerializedEntityKeyComparator.class);
 		entities = env.openDatabase(null, "entities", dbconfig);
 		
+        logger.info("  {}: Opening sequences table", app_id);
 		sequences = env.openDatabase(null, "sequences", dbconfig);
 
+		logger.info("  {}: Opening entities_by_property index", app_id);
 		SecondaryConfig secondconfig = new SecondaryConfig();
 		secondconfig.setAllowCreate(true);
 		secondconfig.setAllowPopulate(true);
@@ -119,6 +124,8 @@ public class AppDatastore {
 		entities_by_property = env.openSecondaryDatabase(null, "entities_by_property", entities, secondconfig);
 		
 		loadCompositeIndexes();
+		
+		logger.info("  {}: Datastore initialized.", app_id);
 	}
 	
 	public void addIndex(Entity.CompositeIndex idx, RpcCallback<ApiBase.Integer64Proto> done) throws DatabaseException {
@@ -138,6 +145,8 @@ public class AppDatastore {
 		if(done != null)
 			done.run(ApiBase.Integer64Proto.newBuilder().setValue(idx.getId()).build());
 		
+		logger.info("  {}: Loading composite index 'idx-{}", this.app_id, idx.getId());
+		logger.debug("  {}: Composite index definition: {}", this.app_id, idx);
 		SecondaryConfig config = new SecondaryConfig();
 		config.setAllowCreate(true);
 		config.setAllowPopulate(true);
