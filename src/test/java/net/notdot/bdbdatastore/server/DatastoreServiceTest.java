@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.Set;
 
 import net.notdot.bdbdatastore.Indexing;
-import net.notdot.protorpc.ProtoRpcController;
 
 import org.junit.After;
 import org.junit.Before;
@@ -137,7 +136,7 @@ public class DatastoreServiceTest {
 	
 	@Test
 	public void testBeginTransaction() {
-		RpcController controller = new ProtoRpcController();
+		RpcController controller = new TestRpcController();
 		TestRpcCallback<DatastoreV3.Transaction> done = new TestRpcCallback<DatastoreV3.Transaction>();
 		service.beginTransaction(controller, VoidProto.getDefaultInstance(), done);
 		assertTrue(done.isCalled());
@@ -145,7 +144,7 @@ public class DatastoreServiceTest {
 		assertTrue(service.transactions.containsKey(done.getValue()));
 		assertEquals(service.transactions.get(done.getValue()), null);
 		
-		controller = new ProtoRpcController();
+		controller = new TestRpcController();
 		done = new TestRpcCallback<DatastoreV3.Transaction>();
 		service.beginTransaction(controller, VoidProto.getDefaultInstance(), done);
 		assertTrue(done.isCalled());
@@ -156,7 +155,7 @@ public class DatastoreServiceTest {
 
 	@Test
 	public void testCommit() {
-		RpcController controller = new ProtoRpcController();
+		RpcController controller = new TestRpcController();
 
 		// Create a transaction
 		TestRpcCallback<DatastoreV3.Transaction> tx_done = new TestRpcCallback<DatastoreV3.Transaction>();
@@ -176,7 +175,7 @@ public class DatastoreServiceTest {
 		assertTrue(void_done.isCalled());
 		
 		// Check the entity is there
-		controller = new ProtoRpcController();
+		controller = new TestRpcController();
 		TestRpcCallback<DatastoreV3.GetResponse> get_done = new TestRpcCallback<DatastoreV3.GetResponse>();
 		DatastoreV3.GetRequest get_request = DatastoreV3.GetRequest.newBuilder().addKey(testkey).build();
 		service.get(controller, get_request, get_done);
@@ -189,7 +188,7 @@ public class DatastoreServiceTest {
 	
 	@Test
 	public void testCommitEmpty() {
-		RpcController controller = new ProtoRpcController();
+		RpcController controller = new TestRpcController();
 
 		// Create a transaction
 		TestRpcCallback<DatastoreV3.Transaction> tx_done = new TestRpcCallback<DatastoreV3.Transaction>();
@@ -205,7 +204,7 @@ public class DatastoreServiceTest {
 
 	@Test
 	public void testDelete() {
-		RpcController controller = new ProtoRpcController();
+		RpcController controller = new TestRpcController();
 		
 		// Create an entity
 		TestRpcCallback<DatastoreV3.PutResponse> put_done = new TestRpcCallback<DatastoreV3.PutResponse>();
@@ -214,7 +213,7 @@ public class DatastoreServiceTest {
 		assertTrue(put_done.isCalled());
 		
 		// Check it's there
-		controller = new ProtoRpcController();
+		controller = new TestRpcController();
 		TestRpcCallback<DatastoreV3.GetResponse> get_done = new TestRpcCallback<DatastoreV3.GetResponse>();
 		DatastoreV3.GetRequest get_request = DatastoreV3.GetRequest.newBuilder().addKey(testkey).build();
 		service.get(controller, get_request, get_done);
@@ -222,14 +221,14 @@ public class DatastoreServiceTest {
 		assertEquals(get_done.getValue().getEntity(0).getEntity(), testent);
 		
 		// Delete it
-		controller = new ProtoRpcController();
+		controller = new TestRpcController();
 		TestRpcCallback<ApiBase.VoidProto> del_done = new TestRpcCallback<ApiBase.VoidProto>();
 		DatastoreV3.DeleteRequest del_request = DatastoreV3.DeleteRequest.newBuilder().addKey(testkey).build();
 		service.delete(controller, del_request, del_done);
 		assertTrue(del_done.isCalled());
 		
 		// Check it's not there
-		controller = new ProtoRpcController();
+		controller = new TestRpcController();
 		get_done = new TestRpcCallback<DatastoreV3.GetResponse>();
 		service.get(controller, get_request, get_done);
 		assertTrue(get_done.isCalled());		
@@ -240,7 +239,7 @@ public class DatastoreServiceTest {
 	public void testGet() {
 		this.testPut();
 		
-		RpcController controller = new ProtoRpcController();
+		RpcController controller = new TestRpcController();
 		TestRpcCallback<DatastoreV3.GetResponse> done = new TestRpcCallback<DatastoreV3.GetResponse>();
 		// Get the two entities we put in testPut()
 		DatastoreV3.GetRequest request = DatastoreV3.GetRequest.newBuilder().addKey(testkey).addKey(sample_key).build();
@@ -260,7 +259,7 @@ public class DatastoreServiceTest {
 
 	@Test
 	public void testPut() {
-		RpcController controller = new ProtoRpcController();
+		RpcController controller = new TestRpcController();
 		TestRpcCallback<DatastoreV3.PutResponse> done = new TestRpcCallback<DatastoreV3.PutResponse>();
 		// Test putting an entity with a name, and one with neither name nor ID
 		DatastoreV3.PutRequest request = DatastoreV3.PutRequest.newBuilder().addEntity(testent).addEntity(testnewent).build();
@@ -282,7 +281,7 @@ public class DatastoreServiceTest {
 
 	@Test
 	public void testRollback() {
-		RpcController controller = new ProtoRpcController();
+		RpcController controller = new TestRpcController();
 
 		// Create a transaction
 		TestRpcCallback<DatastoreV3.Transaction> tx_done = new TestRpcCallback<DatastoreV3.Transaction>();
@@ -302,7 +301,7 @@ public class DatastoreServiceTest {
 		assertTrue(void_done.isCalled());
 		
 		// Check the entity is not there
-		controller = new ProtoRpcController();
+		controller = new TestRpcController();
 		TestRpcCallback<DatastoreV3.GetResponse> get_done = new TestRpcCallback<DatastoreV3.GetResponse>();
 		DatastoreV3.GetRequest get_request = DatastoreV3.GetRequest.newBuilder().addKey(testkey).build();
 		service.get(controller, get_request, get_done);
@@ -315,7 +314,7 @@ public class DatastoreServiceTest {
 
 	@Test
 	public void testRollbackEmpty() {
-		RpcController controller = new ProtoRpcController();
+		RpcController controller = new TestRpcController();
 
 		// Create a transaction
 		TestRpcCallback<DatastoreV3.Transaction> tx_done = new TestRpcCallback<DatastoreV3.Transaction>();
@@ -331,7 +330,7 @@ public class DatastoreServiceTest {
 	
 	protected void loadCorpus() throws ParseException, FileNotFoundException, IOException {
 		// Insert the test corpus
-		RpcController controller = new ProtoRpcController();
+		RpcController controller = new TestRpcController();
 		TestRpcCallback<DatastoreV3.PutResponse> put_done = new TestRpcCallback<DatastoreV3.PutResponse>();
 		service.put(controller, dataset_put, put_done);
 		assertTrue(put_done.isCalled());
@@ -369,7 +368,7 @@ public class DatastoreServiceTest {
 	
 	@Test
 	public void testEntityQuery() throws ParseException, FileNotFoundException, IOException {
-		RpcController controller = new ProtoRpcController();
+		RpcController controller = new TestRpcController();
 
 		loadCorpus();
 		
@@ -383,7 +382,7 @@ public class DatastoreServiceTest {
 		assertTrue(service.cursors.containsKey(query_done.getValue().getCursor()));
 		
 		// Get the results
-		controller = new ProtoRpcController();
+		controller = new TestRpcController();
 		DatastoreV3.NextRequest next = DatastoreV3.NextRequest.newBuilder()
 			.setCursor(query_done.getValue().getCursor())
 			.setCount(5).build();
@@ -396,7 +395,7 @@ public class DatastoreServiceTest {
 		assertEquals(dataset_put.getEntity(2), query_done.getValue().getResult(1));
 		
 		// Delete the cursor
-		controller = new ProtoRpcController();
+		controller = new TestRpcController();
 		TestRpcCallback<ApiBase.VoidProto> delete_done = new TestRpcCallback<ApiBase.VoidProto>();
 		service.deleteCursor(controller, query_done.getValue().getCursor(), delete_done);
 		assertTrue(delete_done.isCalled());
@@ -405,7 +404,7 @@ public class DatastoreServiceTest {
 	
 	@Test
 	public void testAncestorQuery() throws ParseException, FileNotFoundException, IOException {
-		RpcController controller = new ProtoRpcController();
+		RpcController controller = new TestRpcController();
 
 		loadCorpus();
 		
@@ -424,7 +423,7 @@ public class DatastoreServiceTest {
 		assertTrue(service.cursors.containsKey(query_done.getValue().getCursor()));
 		
 		// Get the results
-		controller = new ProtoRpcController();
+		controller = new TestRpcController();
 		DatastoreV3.NextRequest next = DatastoreV3.NextRequest.newBuilder()
 			.setCursor(query_done.getValue().getCursor())
 			.setCount(5).build();
@@ -472,7 +471,7 @@ public class DatastoreServiceTest {
 		};
 		
 		for(int i = 0; i < operators.length; i++) {
-			RpcController controller = new ProtoRpcController();
+			RpcController controller = new TestRpcController();
 			DatastoreV3.Query query = DatastoreV3.Query.newBuilder()
 				.setApp("testapp")
 				.setKind(ByteString.copyFromUtf8("wtype"))
@@ -488,7 +487,7 @@ public class DatastoreServiceTest {
 			DatastoreV3.NextRequest next = DatastoreV3.NextRequest.newBuilder()
 				.setCursor(done.getValue().getCursor())
 				.setCount(10).build();
-			controller = new ProtoRpcController();
+			controller = new TestRpcController();
 			done = new TestRpcCallback<DatastoreV3.QueryResult>();
 			service.next(controller, next, done);
 			assertTrue(done.isCalled());
@@ -507,7 +506,7 @@ public class DatastoreServiceTest {
 		// Tests that a range query on a single property works.
 		loadCorpus();
 		
-		RpcController controller = new ProtoRpcController();
+		RpcController controller = new TestRpcController();
 		DatastoreV3.Query query = DatastoreV3.Query.newBuilder()
 			.setApp("testapp")
 			.setKind(ByteString.copyFromUtf8("wtype"))
@@ -530,7 +529,7 @@ public class DatastoreServiceTest {
 		DatastoreV3.NextRequest next = DatastoreV3.NextRequest.newBuilder()
 			.setCursor(done.getValue().getCursor())
 			.setCount(10).build();
-		controller = new ProtoRpcController();
+		controller = new TestRpcController();
 		done = new TestRpcCallback<DatastoreV3.QueryResult>();
 		service.next(controller, next, done);
 		assertTrue(done.isCalled());
@@ -545,7 +544,7 @@ public class DatastoreServiceTest {
 		// Tests that a sort query on a single property works.
 		loadCorpus();
 		
-		RpcController controller = new ProtoRpcController();
+		RpcController controller = new TestRpcController();
 		DatastoreV3.Query query = DatastoreV3.Query.newBuilder()
 			.setApp("testapp")
 			.setKind(ByteString.copyFromUtf8("wtype"))
@@ -558,7 +557,7 @@ public class DatastoreServiceTest {
 		DatastoreV3.NextRequest next = DatastoreV3.NextRequest.newBuilder()
 			.setCursor(done.getValue().getCursor())
 			.setCount(10).build();
-		controller = new ProtoRpcController();
+		controller = new TestRpcController();
 		done = new TestRpcCallback<DatastoreV3.QueryResult>();
 		service.next(controller, next, done);
 		assertTrue(done.isCalled());
@@ -575,7 +574,7 @@ public class DatastoreServiceTest {
 		// Tests that a merge join query executes correctly
 		loadCorpus();
 
-		RpcController controller = new ProtoRpcController();
+		RpcController controller = new TestRpcController();
 		DatastoreV3.Query query = DatastoreV3.Query.newBuilder()
 			.setApp("testapp")
 			.setKind(ByteString.copyFromUtf8("wtype"))
@@ -597,7 +596,7 @@ public class DatastoreServiceTest {
 		DatastoreV3.NextRequest next = DatastoreV3.NextRequest.newBuilder()
 			.setCursor(done.getValue().getCursor())
 			.setCount(10).build();
-		controller = new ProtoRpcController();
+		controller = new TestRpcController();
 		done = new TestRpcCallback<DatastoreV3.QueryResult>();
 		service.next(controller, next, done);
 		assertTrue(done.isCalled());
@@ -610,7 +609,7 @@ public class DatastoreServiceTest {
 	public void testEmptyResultSet() throws ParseException, FileNotFoundException, IOException {
 		loadCorpus();
 
-		RpcController controller = new ProtoRpcController();
+		RpcController controller = new TestRpcController();
 		DatastoreV3.Query query = DatastoreV3.Query.newBuilder()
 			.setApp("testapp")
 			.setKind(ByteString.copyFromUtf8("wtype"))
@@ -628,7 +627,7 @@ public class DatastoreServiceTest {
 		DatastoreV3.NextRequest next = DatastoreV3.NextRequest.newBuilder()
 			.setCursor(done.getValue().getCursor())
 			.setCount(10).build();
-		controller = new ProtoRpcController();
+		controller = new TestRpcController();
 		done = new TestRpcCallback<DatastoreV3.QueryResult>();
 		service.next(controller, next, done);
 		assertTrue(done.isCalled());
@@ -640,7 +639,7 @@ public class DatastoreServiceTest {
 	public void testCount() throws ParseException, FileNotFoundException, IOException {
 		loadCorpus();
 		
-		RpcController controller = new ProtoRpcController();
+		RpcController controller = new TestRpcController();
 		DatastoreV3.Query query = DatastoreV3.Query.newBuilder()
 			.setApp("testapp")
 			.setKind(ByteString.copyFromUtf8("wtype"))
@@ -654,7 +653,7 @@ public class DatastoreServiceTest {
 	
 	@Test
 	public void testCompositeIndexGeneration() throws ParseException, FileNotFoundException, IOException, DatabaseException {
-		RpcController controller = new ProtoRpcController();
+		RpcController controller = new TestRpcController();
 		
 		TestRpcCallback<ApiBase.Integer64Proto> create_done = new TestRpcCallback<ApiBase.Integer64Proto>();
 		service.createIndex(controller, compositeIdx, create_done);
@@ -663,7 +662,7 @@ public class DatastoreServiceTest {
 		loadCorpus();
 		
 		TestRpcCallback<DatastoreV3.CompositeIndices> list_done = new TestRpcCallback<DatastoreV3.CompositeIndices>();
-		controller = new ProtoRpcController();
+		controller = new TestRpcController();
 		service.getIndices(controller, ApiBase.StringProto.newBuilder().setValue("testapp").build(), list_done);
 		assertTrue(list_done.isCalled());
 		assertEquals(1, list_done.getValue().getIndexCount());
@@ -689,19 +688,19 @@ public class DatastoreServiceTest {
 		cur.close();
 		
 		TestRpcCallback<ApiBase.VoidProto> delete_done = new TestRpcCallback<ApiBase.VoidProto>();
-		controller = new ProtoRpcController();
+		controller = new TestRpcController();
 		service.deleteIndex(controller, list_done.getValue().getIndex(0), delete_done);
 		assertTrue(delete_done.isCalled());
 	}
 	
 	@Test
 	public void testCompositeIndexQueries() throws ParseException, FileNotFoundException, IOException {
-		RpcController controller = new ProtoRpcController();
+		RpcController controller = new TestRpcController();
 		
 		TestRpcCallback<ApiBase.Integer64Proto> done = new TestRpcCallback<ApiBase.Integer64Proto>();
 		service.createIndex(controller, compositeIdx, done);
 		
-		controller = new ProtoRpcController();
+		controller = new TestRpcController();
 		done = new TestRpcCallback<ApiBase.Integer64Proto>();
 		service.createIndex(controller, compositeAncestorIdx, done);
 		
@@ -775,7 +774,7 @@ public class DatastoreServiceTest {
 			assertTrue(service.cursors.containsKey(query_done.getValue().getCursor()));
 		
 			// Get the results
-			controller = new ProtoRpcController();
+			controller = new TestRpcController();
 			DatastoreV3.NextRequest next = DatastoreV3.NextRequest.newBuilder()
 				.setCursor(query_done.getValue().getCursor())
 				.setCount(5).build();

@@ -1,5 +1,7 @@
 package net.notdot.protorpc;
 
+import java.net.SocketAddress;
+
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
@@ -19,29 +21,18 @@ import com.google.protobuf.Descriptors.MethodDescriptor;
 @ChannelPipelineCoverage("one")
 public class ProtoRpcHandler extends SimpleChannelHandler {
 	protected class ProtoRpcCallback implements RpcCallback<Message> {
-		protected Channel channel = null;
-		protected boolean called = false;
-		protected long rpcId;
+		protected ProtoRpcController controller;
 		
-		protected ProtoRpcCallback(Channel ch, long rpcId) {
-			this.channel = ch;
-			this.rpcId = rpcId;
+		protected ProtoRpcCallback(ProtoRpcController controller) {
+			this.controller = controller;
 		}
 		
 		public void run(Message arg0) {
-			if(!called) {
-				Rpc.Response response = Rpc.Response.newBuilder()
-					.setRpcId(this.rpcId)
-					.setStatus(Rpc.Response.ResponseType.OK)
-					.setBody(arg0.toByteString()).build();
-				this.channel.write(response);
-				called = true;
-				logger.trace("Response to RPC {}: {}", this.rpcId, arg0);
-			}
-		}
-
-		public boolean isCalled() {
-			return called;
+			Rpc.Response response = Rpc.Response.newBuilder()
+				.setRpcId(this.controller.getRpcId())
+				.setStatus(Rpc.Response.ResponseType.OK)
+				.setBody(arg0.toByteString()).build();
+			this.controller.sendResponse(response);
 		}
 	}
 
@@ -54,6 +45,7 @@ public class ProtoRpcHandler extends SimpleChannelHandler {
 	public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
 			throws Exception {
 		open_channels.add(e.getChannel());
+		logger.info("New connection from {}.", ctx.getChannel().getRemoteAddress());
 	}
 
 	@Override
@@ -61,6 +53,7 @@ public class ProtoRpcHandler extends SimpleChannelHandler {
 			throws Exception {
 		if(service instanceof Disposable)
 			((Disposable)service).close();
+		logger.info("Client {} disconnected.", ctx.getChannel().getRemoteAddress());
 	}
 
 	public ProtoRpcHandler(Service s, ChannelGroup channels) {
@@ -72,6 +65,7 @@ public class ProtoRpcHandler extends SimpleChannelHandler {
 	public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
 			throws Exception {
 		Channel ch = e.getChannel();
+		SocketAddress remote_addr = ch.getRemoteAddress();
 		Rpc.Request request = (Rpc.Request) e.getMessage();
 				
 		// For now we ignore the service name in the message.
@@ -90,34 +84,25 @@ public class ProtoRpcHandler extends SimpleChannelHandler {
 			return;
 		}
 
-		logger.trace("Handling RPC {} for {}.{}. Request: {}",
-				new Object[] { request.getRpcId(), request.getService(),
-				               request.getMethod(), request_data});
+		logger.debug("Client {} RPC {} request data: {}", new Object[] { remote_addr, request.getRpcId(), request_data });
 
-		ProtoRpcCallback callback = new ProtoRpcCallback(ch, request.getRpcId());
-		ProtoRpcController controller = new ProtoRpcController();
+		ProtoRpcController controller = new ProtoRpcController(ch, request.getService(), request.getMethod(), request.getRpcId());
+		ProtoRpcCallback callback = new ProtoRpcCallback(controller);
 		try {
 			service.callMethod(method, controller, request_data, callback);
 		} catch(RpcFailedError ex) {
 			if(ex.getCause() != null) {
-				logger.error("Internal error", ex.getCause());
+				logger.error("Internal error: ", ex.getCause());
 			}
-			controller.setFailed(ex.getMessage());
-			controller.setApplicationError(ex.getApplicationError());
+			controller.setFailed(ex.getMessage(), ex.getApplicationError());
 		}
-		if(!callback.isCalled()) {
-			if(controller.failed()) {
-				ch.write(Rpc.Response.newBuilder()
-						.setRpcId(request.getRpcId())
-						.setStatus(Rpc.Response.ResponseType.APPLICATION_ERROR)
-						.setErrorDetail(controller.errorText())
-						.setApplicationError(controller.getApplicationError()).build());
-			} else {
-				ch.write(Rpc.Response.newBuilder()
-						.setRpcId(request.getRpcId())
-						.setStatus(Rpc.Response.ResponseType.RPC_FAILED)
-						.setErrorDetail("RPC handler failed to issue a response").build());
-			}
+		if(!controller.isResponseSent()) {
+			controller.sendResponse(Rpc.Response.newBuilder()
+				.setRpcId(request.getRpcId())
+				.setStatus(Rpc.Response.ResponseType.RPC_FAILED)
+				.setErrorDetail("RPC handler failed to issue a response").build());
+			logger.error("Client {} RPC {} failed to return a response.",
+					new Object[] { remote_addr, request.getRpcId() });
 		}
 	}	
 }

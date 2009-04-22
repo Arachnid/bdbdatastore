@@ -50,6 +50,7 @@ public class DatastoreServer {
 
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
+				logger.info("Shutting down.");
 				ChannelGroupFuture future = openChannels.close();
 				future.awaitUninterruptibly();
 				datastore.close();
