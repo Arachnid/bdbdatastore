@@ -67,9 +67,6 @@ public class AppDatastore {
 	// This table stores counter values. We can't store them in the entities table, because getSequence
 	// inserts records in the database it's called on.
 	protected Database sequences;
-	
-	// Sequence used for generating update_id values
-	protected Sequence updateIdSeq;
 
 	// Cached sequences
 	protected Map<Reference, Sequence> sequence_cache = new HashMap<Reference, Sequence>();
@@ -114,15 +111,6 @@ public class AppDatastore {
 		
         logger.info("  {}: Opening sequences table", app_id);
 		sequences = env.openDatabase(null, "sequences", dbconfig);
-		
-		// Get the update ID sequence
-		SequenceConfig sequenceconfig = new SequenceConfig();
-		sequenceconfig.setAllowCreate(true);
-		sequenceconfig.setCacheSize(DatastoreServer.properties.getInt("datastore.updateid.cache_size", 1000));
-		sequenceconfig.setInitialValue(1);
-		DatabaseEntry updateSeqKey = new DatabaseEntry(Indexing.EntityKey.newBuilder()
-				.setKind(ByteString.copyFromUtf8("update_id_seq")).build().toByteArray());
-		this.updateIdSeq = this.sequences.openSequence(null, updateSeqKey, sequenceconfig);
 
 		logger.info("  {}: Opening entities_by_property index", app_id);
 		SecondaryConfig secondconfig = new SecondaryConfig();
@@ -290,9 +278,7 @@ public class AppDatastore {
 		
 		DatabaseEntry key = new DatabaseEntry(toEntityKey(ref).toByteArray());
 		DatabaseEntry value = new DatabaseEntry(Indexing.EntityData.newBuilder()
-				.setData(entity)
-				.setUpdateId(this.updateIdSeq.get(null, 1))
-				.build().toByteArray());
+				.setData(entity).build().toByteArray());
 		OperationStatus status = entities.put(tx, key, value);
 		if(status != OperationStatus.SUCCESS)
 			throw new DatabaseException(String.format("Failed to put entity %s: put returned %s", entity.getKey(), status));

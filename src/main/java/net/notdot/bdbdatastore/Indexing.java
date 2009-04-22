@@ -38,12 +38,6 @@ public final class Indexing {
     public boolean hasData() { return hasData; }
     public com.google.appengine.entity.Entity.EntityProto getData() { return data_; }
     
-    // required int64 update_id = 2;
-    private boolean hasUpdateId;
-    private long updateId_ = 0L;
-    public boolean hasUpdateId() { return hasUpdateId; }
-    public long getUpdateId() { return updateId_; }
-    
     public static net.notdot.bdbdatastore.Indexing.EntityData parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -185,24 +179,6 @@ public final class Indexing {
       public Builder clearData() {
         result.hasData = false;
         result.data_ = com.google.appengine.entity.Entity.EntityProto.getDefaultInstance();
-        return this;
-      }
-      
-      // required int64 update_id = 2;
-      public boolean hasUpdateId() {
-        return result.hasUpdateId();
-      }
-      public long getUpdateId() {
-        return result.getUpdateId();
-      }
-      public Builder setUpdateId(long value) {
-        result.hasUpdateId = true;
-        result.updateId_ = value;
-        return this;
-      }
-      public Builder clearUpdateId() {
-        result.hasUpdateId = false;
-        result.updateId_ = 0L;
         return this;
       }
     }
@@ -1147,20 +1123,19 @@ public final class Indexing {
   static {
     java.lang.String descriptorData =
       "\n\016indexing.proto\022\027net.notdot.bdbdatastor" +
-      "e\032\014entity.proto\032\016api_base.proto\"W\n\nEntit" +
+      "e\032\014entity.proto\032\016api_base.proto\"D\n\nEntit" +
       "yData\0226\n\004data\030\001 \002(\0132(.com.google.appengi" +
-      "ne.entity.EntityProto\022\021\n\tupdate_id\030\002 \002(\003" +
-      "\"J\n\tEntityKey\022\014\n\004kind\030\001 \002(\014\022/\n\004path\030\002 \001(" +
-      "\0132!.com.google.appengine.entity.Path\"i\n\020" +
-      "PropertyIndexKey\022\014\n\004kind\030\001 \002(\014\022\014\n\004name\030\002" +
-      " \002(\014\0229\n\005value\030\003 \001(\0132*.com.google.appengi" +
-      "ne.entity.PropertyValue\"\203\001\n\021CompositeInd" +
-      "exKey\0223\n\010ancestor\030\001 \001(\0132!.com.google.app" +
-      "engine.entity.Path\0229\n\005value\030\002 \003(\0132*.com." +
-      "google.appengine.entity.PropertyValue\"X\n" +
-      "\tIndexList\022:\n\005index\030\001 \003(\0132+.com.google.a" +
-      "ppengine.entity.CompositeIndex\022\017\n\007next_i" +
-      "d\030\002 \002(\003";
+      "ne.entity.EntityProto\"J\n\tEntityKey\022\014\n\004ki" +
+      "nd\030\001 \002(\014\022/\n\004path\030\002 \001(\0132!.com.google.appe" +
+      "ngine.entity.Path\"i\n\020PropertyIndexKey\022\014\n" +
+      "\004kind\030\001 \002(\014\022\014\n\004name\030\002 \002(\014\0229\n\005value\030\003 \001(\013" +
+      "2*.com.google.appengine.entity.PropertyV" +
+      "alue\"\203\001\n\021CompositeIndexKey\0223\n\010ancestor\030\001" +
+      " \001(\0132!.com.google.appengine.entity.Path\022" +
+      "9\n\005value\030\002 \003(\0132*.com.google.appengine.en" +
+      "tity.PropertyValue\"X\n\tIndexList\022:\n\005index" +
+      "\030\001 \003(\0132+.com.google.appengine.entity.Com" +
+      "positeIndex\022\017\n\007next_id\030\002 \002(\003";
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
@@ -1171,7 +1146,7 @@ public final class Indexing {
           internal_static_net_notdot_bdbdatastore_EntityData_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_net_notdot_bdbdatastore_EntityData_descriptor,
-              new java.lang.String[] { "Data", "UpdateId", },
+              new java.lang.String[] { "Data", },
               net.notdot.bdbdatastore.Indexing.EntityData.class,
               net.notdot.bdbdatastore.Indexing.EntityData.Builder.class);
           internal_static_net_notdot_bdbdatastore_EntityKey_descriptor =
