@@ -1,0 +1,9 @@
+*.class
+datastore
+*.pyc
+bin
+.project
+.classpath
+target
+.settings
+
