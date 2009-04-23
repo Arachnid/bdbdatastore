@@ -842,4 +842,28 @@ public class DatastoreServiceTest {
 		assertTrue(comparator.compare(key5, keyLast) > 0);
 		assertTrue(comparator.compare(keyZ, keyLast) > 0);
 	}
+	
+	@Test
+	public void testGetSchema() throws ParseException, FileNotFoundException, IOException {
+		RpcController controller = new TestRpcController();
+		
+		loadCorpus();
+		
+		String[] kinds = new String[] { "sss", "testtype", "uuu", "vtype", "wtype" };
+		
+		TestRpcCallback<DatastoreV3.Schema> done = new TestRpcCallback<DatastoreV3.Schema>();
+		service.getSchema(controller, ApiBase.StringProto.newBuilder().setValue("testapp").build(), done);
+		assertTrue(done.isCalled());
+		assertEquals(kinds.length, done.getValue().getKindCount());
+		
+		for(int i = 0; i < kinds.length; i++) {
+			Entity.Path path = done.getValue().getKind(i).getKey().getPath();
+			assertEquals(kinds[i], path.getElement(0).getType().toStringUtf8());
+		}
+		
+		Entity.EntityProto entity = done.getValue().getKind(1);
+		assertEquals("bar", entity.getProperty(0).getName().toStringUtf8());
+		assertEquals("baz", entity.getProperty(1).getName().toStringUtf8());
+		assertEquals("foo", entity.getProperty(2).getName().toStringUtf8());
+	}
 }

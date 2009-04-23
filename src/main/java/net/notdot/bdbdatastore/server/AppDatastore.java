@@ -44,6 +44,7 @@ import com.sleepycat.je.EnvironmentLockedException;
 import com.sleepycat.je.JoinCursor;
 import com.sleepycat.je.OperationStatus;
 import com.sleepycat.je.SecondaryConfig;
+import com.sleepycat.je.SecondaryCursor;
 import com.sleepycat.je.SecondaryDatabase;
 import com.sleepycat.je.Sequence;
 import com.sleepycat.je.SequenceConfig;
@@ -502,30 +503,48 @@ public class AppDatastore {
 	}
 
 	public Schema getSchema() throws DatabaseException {
-		Cursor cursor = this.entities.openCursor(null, null);
-		DatastoreV3.Schema.Builder schema = DatastoreV3.Schema.newBuilder();
+		SecondaryCursor cursor = this.entities_by_property.openSecondaryCursor(null, null);
 		DatabaseEntry key = new DatabaseEntry();
 		DatabaseEntry data = new DatabaseEntry();
+		DatastoreV3.Schema.Builder schema = DatastoreV3.Schema.newBuilder();
+		Entity.EntityProto.Builder entity = null;
+		ByteString currentEntityType = null;
 		
 		OperationStatus status = cursor.getFirst(key, data, null);
 		while(status == OperationStatus.SUCCESS) {
 			try {
-				Indexing.EntityKey entityKey = Indexing.EntityKey.parseFrom(key.getData());
-				Entity.EntityProto entity = Indexing.EntityData.parseFrom(data.getData()).getData();
-				schema.addKind(entity);
-				
+				Indexing.PropertyIndexKey propertyKey = Indexing.PropertyIndexKey.parseFrom(key.getData());
+				if(!propertyKey.getKind().equals(currentEntityType)) {
+					if(entity != null)
+						schema.addKind(entity);
+					currentEntityType = propertyKey.getKind();
+					entity = Entity.EntityProto.newBuilder()
+						.setKey(Entity.Reference.newBuilder()
+							.setApp(app_id)
+							.setPath(Entity.Path.newBuilder()
+								.addElement(Entity.Path.Element.newBuilder()
+									.setType(currentEntityType))))
+						.setEntityGroup(Entity.Path.getDefaultInstance());
+				}
+				entity.addProperty(Entity.Property.newBuilder()
+					.setName(propertyKey.getName())
+					.setValue(Entity.PropertyValue.getDefaultInstance()));
+
 				// Assemble a key that's greater than this one
-				byte[] newKind = new byte[entityKey.getKind().size() + 1];
-				entityKey.getKind().copyTo(newKind, 0);
-				key.setData(Indexing.EntityKey.newBuilder(entityKey)
-					.setKind(ByteString.copyFrom(newKind)).build().toByteArray());
+				byte[] newName = new byte[propertyKey.getName().size() + 1];
+				propertyKey.getName().copyTo(newName, 0);
+				key.setData(Indexing.PropertyIndexKey.newBuilder(propertyKey)
+					.setName(ByteString.copyFrom(newName))
+					.build().toByteArray());
 				status = cursor.getSearchKeyRange(key, data, null);
 			} catch(InvalidProtocolBufferException ex) {
 				logger.error("Invalid protocol buffer encountered in getSchema");
 				status = cursor.getNext(key, data, null);
 			}
 		}
-		
+		if(entity != null)
+			schema.addKind(entity);
+
 		return schema.build();
 	}
 }

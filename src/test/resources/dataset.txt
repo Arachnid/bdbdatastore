@@ -72,6 +72,12 @@ entity {
     }
   }
   property {
+    name: "baz"
+    value {
+      stringValue: "baz"
+    }
+  }
+  property {
     name: "foo"
     value {
       int64Value: 1234
