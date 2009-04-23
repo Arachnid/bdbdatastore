@@ -23,6 +23,7 @@ import com.google.appengine.base.ApiBase;
 import com.google.appengine.datastore_v3.DatastoreV3;
 import com.google.appengine.datastore_v3.DatastoreV3.CompositeIndices;
 import com.google.appengine.datastore_v3.DatastoreV3.Query;
+import com.google.appengine.datastore_v3.DatastoreV3.Schema;
 import com.google.appengine.entity.Entity;
 import com.google.appengine.entity.Entity.CompositeIndex;
 import com.google.appengine.entity.Entity.EntityProto;
@@ -498,5 +499,33 @@ public class AppDatastore {
 			}
 		}
 		return response.build();
+	}
+
+	public Schema getSchema() throws DatabaseException {
+		Cursor cursor = this.entities.openCursor(null, null);
+		DatastoreV3.Schema.Builder schema = DatastoreV3.Schema.newBuilder();
+		DatabaseEntry key = new DatabaseEntry();
+		DatabaseEntry data = new DatabaseEntry();
+		
+		OperationStatus status = cursor.getFirst(key, data, null);
+		while(status == OperationStatus.SUCCESS) {
+			try {
+				Indexing.EntityKey entityKey = Indexing.EntityKey.parseFrom(key.getData());
+				Entity.EntityProto entity = Indexing.EntityData.parseFrom(data.getData()).getData();
+				schema.addKind(entity);
+				
+				// Assemble a key that's greater than this one
+				byte[] newKind = new byte[entityKey.getKind().size() + 1];
+				entityKey.getKind().copyTo(newKind, 0);
+				key.setData(Indexing.EntityKey.newBuilder(entityKey)
+					.setKind(ByteString.copyFrom(newKind)).build().toByteArray());
+				status = cursor.getSearchKeyRange(key, data, null);
+			} catch(InvalidProtocolBufferException ex) {
+				logger.error("Invalid protocol buffer encountered in getSchema");
+				status = cursor.getNext(key, data, null);
+			}
+		}
+		
+		return schema.build();
 	}
 }

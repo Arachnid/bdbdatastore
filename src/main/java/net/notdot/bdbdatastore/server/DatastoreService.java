@@ -314,7 +314,12 @@ public class DatastoreService extends
 	@Override
 	public void getSchema(RpcController controller, StringProto request,
 			RpcCallback<Schema> done) {
-		throw new RpcFailedError("Operation not supported.", DatastoreV3.Error.ErrorCode.BAD_REQUEST.getNumber());
+		AppDatastore ds = this.datastore.getAppDatastore(request.getValue());
+		try {
+			done.run(ds.getSchema());
+		} catch (DatabaseException ex) {
+			throw new RpcFailedError(ex, DatastoreV3.Error.ErrorCode.INTERNAL_ERROR.getNumber());
+		}
 	}
 
 	@Override
