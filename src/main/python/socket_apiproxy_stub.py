@@ -61,12 +61,24 @@ class SocketApiProxyStub(object):
     self._sock.close()
     self._sock = None
 
+  def _recvAll(self, size):
+    # We should use buffers here, but can't in the dev_appserver.
+    data = []
+    data_size = 0
+    while data_size < size:
+      d = self._sock.recv(size)
+      if len(d) == 0:
+        raise socket.error()
+      data.append(d)
+      data_size += len(d)
+    return ''.join(data)
+
   def _writePB(self, pb):
     self._sock.sendall(struct.pack("!i", pb.ByteSize()) + pb.SerializeToString())
 
   def _readPB(self, pb):
-    size = struct.unpack("!i", self._sock.recv(4, socket.MSG_WAITALL))[0]
-    data = self._sock.recv(size, socket.MSG_WAITALL)
+    size = struct.unpack("!i", self._recvAll(4))[0]
+    data = self._recvAll(size)
     pb.MergeFromString(data)
     return pb
 
