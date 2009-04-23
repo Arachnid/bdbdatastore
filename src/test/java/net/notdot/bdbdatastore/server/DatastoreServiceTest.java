@@ -866,4 +866,9 @@ public class DatastoreServiceTest {
 		assertEquals("baz", entity.getProperty(1).getName().toStringUtf8());
 		assertEquals("foo", entity.getProperty(2).getName().toStringUtf8());
 	}
+	
+	@Test
+	public void testKeyQueries() {
+		
+	}
 }
