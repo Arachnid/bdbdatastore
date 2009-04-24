@@ -12,6 +12,8 @@ import com.google.appengine.entity.Entity;
 import com.google.protobuf.ByteString;
 
 public class QuerySpec {
+	public static final ByteString KEY_PROPERTY = ByteString.copyFromUtf8("__key__");
+	
 	protected String app;
 	protected ByteString kind;
 	protected Entity.Reference ancestor = null;
@@ -33,6 +35,9 @@ public class QuerySpec {
 			this.ancestor = query.getAncestor();
 		this.filters = FilterSpec.FromQuery(query);
 		this.orders = query.getOrderList();
+		if(this.orders.size() > 0 && this.orders.get(this.orders.size() - 1).getProperty().equals(KEY_PROPERTY))
+			// __key__ as last sort order is a no-op
+			this.orders.remove(this.orders.size() - 1);
 		if(query.hasOffset())
 			this.offset = query.getOffset();
 		if(query.hasLimit())

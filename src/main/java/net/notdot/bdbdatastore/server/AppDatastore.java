@@ -453,14 +453,51 @@ public class AppDatastore {
 
 	/* Attempts to generate a query plan for a scan by entity only */
 	private AbstractDatastoreResultSet getEntityQueryPlan(QuerySpec query) throws DatabaseException {
-		//TODO: Handle __key__ sort order and filter specifications.
-		if(query.hasAncestor() || query.getFilters().size() > 0 || query.getOrders().size() > 0)
+		if(query.hasAncestor() || query.getOrders().size() > 0)
 			return null;
 		
-		Cursor cursor = this.entities.openCursor(null, null);
-		Indexing.EntityKey startKey = Indexing.EntityKey.newBuilder().setKind(query.getKind()).build();
-		MessagePredicate predicate = new KeyPredicate(startKey);
-		return new DatastoreResultSet(cursor, startKey, false, query, predicate);
+		if(query.getFilters().size() == 1 && query.getFilters().containsKey(QuerySpec.KEY_PROPERTY)) {
+			Indexing.EntityKey startKey;
+			
+			List<Entity.PropertyValue> values = new ArrayList<Entity.PropertyValue>(1);
+			boolean lowerExclusive = query.getBounds(query.getIndex(), 1, values);
+			if(values.size() > 1)
+				return null;
+			if(values.size() == 1 && values.get(0).hasReferenceValue()) {
+				 startKey = Indexing.EntityKey.newBuilder()
+					.setKind(query.getKind())
+				 	.setPath(EntityKeyComparator.toEntityKey(values.get(0).getReferenceValue()).getPath())
+				 	.build();
+			} else {
+				 startKey = Indexing.EntityKey.newBuilder()
+					.setKind(query.getKind())
+				 	.build();
+			}
+			
+			values.clear();
+			boolean upperExclusive = query.getBounds(query.getIndex(), -1, values);
+			if(values.size() > 1)
+				return null;
+			MessagePredicate predicate;
+			if(values.size() == 1 && values.get(0).hasReferenceValue()) {
+				Indexing.EntityKey endKey = Indexing.EntityKey.newBuilder()
+					.setKind(query.getKind())
+					.setPath(EntityKeyComparator.toEntityKey(values.get(0).getReferenceValue()).getPath())
+					.build();
+				predicate = new KeyRangePredicate(endKey, upperExclusive);
+			} else {
+				predicate = new KeyPredicate(Indexing.EntityKey.newBuilder().setKind(query.getKind()).build());
+			}
+			
+			Cursor cursor = this.entities.openCursor(null, null);
+			return new DatastoreResultSet(cursor, startKey, lowerExclusive, query, predicate);
+		} else if(query.getFilters().size() == 0) {
+			Cursor cursor = this.entities.openCursor(null, null);
+			Indexing.EntityKey startKey = Indexing.EntityKey.newBuilder().setKind(query.getKind()).build();
+			MessagePredicate predicate = new KeyPredicate(startKey);
+			return new DatastoreResultSet(cursor, startKey, false, query, predicate);
+		}
+		return null;
 	}
 
 	public boolean deleteIndex(CompositeIndex idx) throws DatabaseException {

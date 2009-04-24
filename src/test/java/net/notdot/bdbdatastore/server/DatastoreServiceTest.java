@@ -868,7 +868,69 @@ public class DatastoreServiceTest {
 	}
 	
 	@Test
-	public void testKeyQueries() {
+	public void testEntityKeyQuery() throws ParseException, FileNotFoundException, IOException {
+		RpcController controller = new TestRpcController();
 		
+		loadCorpus();
+		
+		Entity.PropertyValue minKey = Entity.PropertyValue.newBuilder()
+			.setReferenceValue(Entity.PropertyValue.ReferenceValue.newBuilder()
+				.setApp("testapp")
+				.addPathElement(Entity.PropertyValue.ReferenceValue.PathElement.newBuilder()
+					.setType(ByteString.copyFromUtf8("testtype"))
+					.setName(ByteString.copyFromUtf8("bar")))).build();
+
+		Entity.PropertyValue maxKey = Entity.PropertyValue.newBuilder()
+		.setReferenceValue(Entity.PropertyValue.ReferenceValue.newBuilder()
+			.setApp("testapp")
+			.addPathElement(Entity.PropertyValue.ReferenceValue.PathElement.newBuilder()
+				.setType(ByteString.copyFromUtf8("testtype"))
+				.setName(ByteString.copyFromUtf8("zzz")))).build();
+		
+		// Construct a query for a kind with __key__ filter
+		DatastoreV3.Query query = DatastoreV3.Query.newBuilder()
+			.setApp("testapp")
+			.setKind(ByteString.copyFromUtf8("testtype"))
+			.addFilter(DatastoreV3.Query.Filter.newBuilder()
+				.setOp(DatastoreV3.Query.Filter.Operator.GREATER_THAN.getNumber())
+				.addProperty(Entity.Property.newBuilder()
+					.setName(QuerySpec.KEY_PROPERTY)
+					.setValue(minKey))).build();
+		TestRpcCallback<DatastoreV3.QueryResult> query_done = new TestRpcCallback<DatastoreV3.QueryResult>();
+		service.runQuery(controller, query, query_done);
+		assertTrue(query_done.isCalled());
+		
+		// Get the results
+		controller = new TestRpcController();
+		DatastoreV3.NextRequest next = DatastoreV3.NextRequest.newBuilder()
+			.setCursor(query_done.getValue().getCursor())
+			.setCount(5).build();
+		query_done = new TestRpcCallback<DatastoreV3.QueryResult>();
+		service.next(controller, next, query_done);
+		assertTrue(query_done.isCalled());
+		
+		assertEquals(1, query_done.getValue().getResultCount());
+		assertEquals("testname", query_done.getValue().getResult(0).getKey().getPath().getElement(0).getName().toStringUtf8());
+		
+		// Try again with range filter
+		query = DatastoreV3.Query.newBuilder(query).addFilter(DatastoreV3.Query.Filter.newBuilder()
+			.setOp(DatastoreV3.Query.Filter.Operator.LESS_THAN.getNumber())
+			.addProperty(Entity.Property.newBuilder()
+				.setName(QuerySpec.KEY_PROPERTY)
+				.setValue(maxKey))).build();
+		query_done = new TestRpcCallback<DatastoreV3.QueryResult>();
+		service.runQuery(controller, query, query_done);
+
+		// Get the results
+		controller = new TestRpcController();
+		next = DatastoreV3.NextRequest.newBuilder()
+			.setCursor(query_done.getValue().getCursor())
+			.setCount(5).build();
+		query_done = new TestRpcCallback<DatastoreV3.QueryResult>();
+		service.next(controller, next, query_done);
+		assertTrue(query_done.isCalled());
+		
+		assertEquals(1, query_done.getValue().getResultCount());
+		assertEquals("testname", query_done.getValue().getResult(0).getKey().getPath().getElement(0).getName().toStringUtf8());
 	}
 }
