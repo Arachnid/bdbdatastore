@@ -438,17 +438,48 @@ public class AppDatastore {
 
 	/* Attempts to generate a query by ancestor and entity */
 	private AbstractDatastoreResultSet getAncestorQueryPlan(QuerySpec query) throws DatabaseException {
-		//TODO: Explicitly handle __key__ sort order
-		if(!query.hasAncestor() || query.getFilters().size() > 0 || query.getOrders().size() > 0)
+		if(!query.hasAncestor() || query.getOrders().size() > 0)
 			return null;
 		
-		Cursor cursor = this.entities.openCursor(null, null);
-		Indexing.EntityKey startKey = Indexing.EntityKey.newBuilder()
+		Indexing.EntityKey keyPrefix = Indexing.EntityKey.newBuilder()
 			.setKind(query.getKind())
 			.setPath(query.getAncestor().getPath())
 			.build();
-		MessagePredicate predicate = new KeyPredicate(startKey);
-		return new DatastoreResultSet(cursor, startKey, false, query, predicate);
+		Indexing.EntityKey startKey;
+		
+		List<Entity.PropertyValue> values = new ArrayList<Entity.PropertyValue>(1);
+		boolean lowerExclusive = false;
+		boolean upperExclusive = false;
+		if(query.getFilters().size() == 1 && query.getFilters().containsKey(QuerySpec.KEY_PROPERTY))
+			lowerExclusive = query.getBounds(query.getIndex(), 1, values);
+		if(values.size() > 1)
+			return null;
+		
+		Indexing.EntityKey lowerBound = (values.size()==1)
+			?EntityKeyComparator.toEntityKey(values.get(0).getReferenceValue())
+			:null;
+		// If we have a __key__ query with a lower bound, and it's greater than the ancestor key...
+		if(lowerBound != null && EntityKeyComparator.instance.compare(lowerBound, keyPrefix) > 0) {
+			startKey = lowerBound;
+		} else {
+			startKey = keyPrefix;
+		}
+		
+		values.clear();
+		if(query.getFilters().size() == 1 && query.getFilters().containsKey(QuerySpec.KEY_PROPERTY))
+			upperExclusive = query.getBounds(query.getIndex(), -1, values);
+		if(values.size() > 1)
+			return null;
+		MessagePredicate predicate = new KeyPredicate(keyPrefix);
+		Indexing.EntityKey endKey = (values.size() == 1)
+			?EntityKeyComparator.toEntityKey(values.get(0).getReferenceValue())
+			:null;
+		// If the query has an upper bound and it's before we would stop anyway...
+		if(endKey != null && predicate.evaluate(endKey))
+			predicate = new KeyRangePredicate(endKey, upperExclusive);
+		
+		Cursor cursor = this.entities.openCursor(null, null);
+		return new DatastoreResultSet(cursor, startKey, lowerExclusive, query, predicate);
 	}
 
 	/* Attempts to generate a query plan for a scan by entity only */
@@ -464,10 +495,7 @@ public class AppDatastore {
 			if(values.size() > 1)
 				return null;
 			if(values.size() == 1 && values.get(0).hasReferenceValue()) {
-				 startKey = Indexing.EntityKey.newBuilder()
-					.setKind(query.getKind())
-				 	.setPath(EntityKeyComparator.toEntityKey(values.get(0).getReferenceValue()).getPath())
-				 	.build();
+				 startKey = EntityKeyComparator.toEntityKey(values.get(0).getReferenceValue());
 			} else {
 				 startKey = Indexing.EntityKey.newBuilder()
 					.setKind(query.getKind())
@@ -480,10 +508,7 @@ public class AppDatastore {
 				return null;
 			MessagePredicate predicate;
 			if(values.size() == 1 && values.get(0).hasReferenceValue()) {
-				Indexing.EntityKey endKey = Indexing.EntityKey.newBuilder()
-					.setKind(query.getKind())
-					.setPath(EntityKeyComparator.toEntityKey(values.get(0).getReferenceValue()).getPath())
-					.build();
+				Indexing.EntityKey endKey = EntityKeyComparator.toEntityKey(values.get(0).getReferenceValue());
 				predicate = new KeyRangePredicate(endKey, upperExclusive);
 			} else {
 				predicate = new KeyPredicate(Indexing.EntityKey.newBuilder().setKind(query.getKind()).build());

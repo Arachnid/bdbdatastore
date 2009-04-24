@@ -933,4 +933,61 @@ public class DatastoreServiceTest {
 		assertEquals(1, query_done.getValue().getResultCount());
 		assertEquals("testname", query_done.getValue().getResult(0).getKey().getPath().getElement(0).getName().toStringUtf8());
 	}
+	
+	@Test
+	public void testAncestorKeyQuery() throws ParseException, FileNotFoundException, IOException {
+		RpcController controller = new TestRpcController();
+
+		Entity.PropertyValue minKey = Entity.PropertyValue.newBuilder()
+			.setReferenceValue(Entity.PropertyValue.ReferenceValue.newBuilder()
+				.setApp("testapp")
+				.addPathElement(Entity.PropertyValue.ReferenceValue.PathElement.newBuilder()
+					.setType(ByteString.copyFromUtf8("vtype"))
+					.setName(ByteString.copyFromUtf8("bar")))).build();
+		Entity.PropertyValue maxKey = Entity.PropertyValue.newBuilder()
+			.setReferenceValue(Entity.PropertyValue.ReferenceValue.newBuilder(minKey.getReferenceValue())
+				.addPathElement(Entity.PropertyValue.ReferenceValue.PathElement.newBuilder()
+					.setType(ByteString.copyFromUtf8("vtype"))
+					.setName(ByteString.copyFromUtf8("baz")))).build();
+
+		loadCorpus();
+		
+		DatastoreV3.Query query = DatastoreV3.Query.newBuilder()
+			.setApp("testapp")
+			.setKind(ByteString.copyFromUtf8("vtype"))
+			.setAncestor(Entity.Reference.newBuilder()
+				.setApp("testapp")
+				.setPath(Entity.Path.newBuilder()
+					.addElement(Entity.Path.Element.newBuilder()
+						.setType(ByteString.copyFromUtf8("vtype"))
+						.setName(ByteString.copyFromUtf8("bar")))))
+			.addFilter(DatastoreV3.Query.Filter.newBuilder()
+				.setOp(DatastoreV3.Query.Filter.Operator.GREATER_THAN.getNumber())
+				.addProperty(Entity.Property.newBuilder()
+					.setName(QuerySpec.KEY_PROPERTY)
+					.setValue(minKey)))
+			.addFilter(DatastoreV3.Query.Filter.newBuilder()
+				.setOp(DatastoreV3.Query.Filter.Operator.LESS_THAN.getNumber())
+				.addProperty(Entity.Property.newBuilder()
+					.setName(QuerySpec.KEY_PROPERTY)
+					.setValue(maxKey)))
+			.build();
+
+		TestRpcCallback<DatastoreV3.QueryResult> query_done = new TestRpcCallback<DatastoreV3.QueryResult>();
+		service.runQuery(controller, query, query_done);
+		assertTrue(query_done.isCalled());
+		assertTrue(service.cursors.containsKey(query_done.getValue().getCursor()));
+		
+		// Get the results
+		controller = new TestRpcController();
+		DatastoreV3.NextRequest next = DatastoreV3.NextRequest.newBuilder()
+			.setCursor(query_done.getValue().getCursor())
+			.setCount(5).build();
+		query_done = new TestRpcCallback<DatastoreV3.QueryResult>();
+		service.next(controller, next, query_done);
+		assertTrue(query_done.isCalled());
+		
+		assertEquals(1, query_done.getValue().getResultCount());
+		assertEquals(dataset_put.getEntity(5), query_done.getValue().getResult(0));
+	}
 }
