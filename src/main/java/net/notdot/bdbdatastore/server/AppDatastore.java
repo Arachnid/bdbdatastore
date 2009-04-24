@@ -445,19 +445,40 @@ public class AppDatastore {
 			.setKind(query.getKind())
 			.setPath(query.getAncestor().getPath())
 			.build();
+		return doPrimaryIndexPlan(query, keyPrefix);
+	}
+
+	/* Attempts to generate a query plan for a scan by entity only */
+	private AbstractDatastoreResultSet getEntityQueryPlan(QuerySpec query) throws DatabaseException {
+		if(query.hasAncestor() || query.getOrders().size() > 0)
+			return null;
+		
+		Indexing.EntityKey keyPrefix = Indexing.EntityKey.newBuilder()
+			.setKind(query.getKind())
+			.build();
+		return doPrimaryIndexPlan(query, keyPrefix);
+	}
+	
+	private AbstractDatastoreResultSet doPrimaryIndexPlan(QuerySpec query, Indexing.EntityKey keyPrefix) throws DatabaseException {
 		Indexing.EntityKey startKey;
 		
 		List<Entity.PropertyValue> values = new ArrayList<Entity.PropertyValue>(1);
 		boolean lowerExclusive = false;
 		boolean upperExclusive = false;
-		if(query.getFilters().size() == 1 && query.getFilters().containsKey(QuerySpec.KEY_PROPERTY))
-			lowerExclusive = query.getBounds(query.getIndex(), 1, values);
-		if(values.size() > 1)
+		if(query.getFilters().size() > 1)
+			return null;
+		if(query.getFilters().size() == 1 && !query.getFilters().containsKey(QuerySpec.KEY_PROPERTY))
 			return null;
 		
-		Indexing.EntityKey lowerBound = (values.size()==1)
-			?EntityKeyComparator.toEntityKey(values.get(0).getReferenceValue())
-			:null;
+		if(query.getFilters().size() == 1) {
+			lowerExclusive = query.getBounds(query.getIndex(), 1, values);
+			if(values.size() > 1)
+				return null;
+		}
+		
+		Indexing.EntityKey lowerBound = null;
+		if(values.size() == 1)
+			lowerBound = EntityKeyComparator.toEntityKey(values.get(0).getReferenceValue());
 		// If we have a __key__ query with a lower bound, and it's greater than the ancestor key...
 		if(lowerBound != null && EntityKeyComparator.instance.compare(lowerBound, keyPrefix) > 0) {
 			startKey = lowerBound;
@@ -466,63 +487,22 @@ public class AppDatastore {
 		}
 		
 		values.clear();
-		if(query.getFilters().size() == 1 && query.getFilters().containsKey(QuerySpec.KEY_PROPERTY))
+		if(query.getFilters().size() == 1) {
 			upperExclusive = query.getBounds(query.getIndex(), -1, values);
-		if(values.size() > 1)
-			return null;
+			if(values.size() > 1)
+				return null;
+		}
+		
 		MessagePredicate predicate = new KeyPredicate(keyPrefix);
-		Indexing.EntityKey endKey = (values.size() == 1)
-			?EntityKeyComparator.toEntityKey(values.get(0).getReferenceValue())
-			:null;
+		Indexing.EntityKey endKey = null;
+		if(values.size() == 1 && values.get(0).getReferenceValue().getPathElementCount() > 0)
+			endKey = EntityKeyComparator.toEntityKey(values.get(0).getReferenceValue());
 		// If the query has an upper bound and it's before we would stop anyway...
 		if(endKey != null && predicate.evaluate(endKey))
 			predicate = new KeyRangePredicate(endKey, upperExclusive);
 		
 		Cursor cursor = this.entities.openCursor(null, null);
 		return new DatastoreResultSet(cursor, startKey, lowerExclusive, query, predicate);
-	}
-
-	/* Attempts to generate a query plan for a scan by entity only */
-	private AbstractDatastoreResultSet getEntityQueryPlan(QuerySpec query) throws DatabaseException {
-		if(query.hasAncestor() || query.getOrders().size() > 0)
-			return null;
-		
-		if(query.getFilters().size() == 1 && query.getFilters().containsKey(QuerySpec.KEY_PROPERTY)) {
-			Indexing.EntityKey startKey;
-			
-			List<Entity.PropertyValue> values = new ArrayList<Entity.PropertyValue>(1);
-			boolean lowerExclusive = query.getBounds(query.getIndex(), 1, values);
-			if(values.size() > 1)
-				return null;
-			if(values.size() == 1 && values.get(0).hasReferenceValue()) {
-				 startKey = EntityKeyComparator.toEntityKey(values.get(0).getReferenceValue());
-			} else {
-				 startKey = Indexing.EntityKey.newBuilder()
-					.setKind(query.getKind())
-				 	.build();
-			}
-			
-			values.clear();
-			boolean upperExclusive = query.getBounds(query.getIndex(), -1, values);
-			if(values.size() > 1)
-				return null;
-			MessagePredicate predicate;
-			if(values.size() == 1 && values.get(0).hasReferenceValue()) {
-				Indexing.EntityKey endKey = EntityKeyComparator.toEntityKey(values.get(0).getReferenceValue());
-				predicate = new KeyRangePredicate(endKey, upperExclusive);
-			} else {
-				predicate = new KeyPredicate(Indexing.EntityKey.newBuilder().setKind(query.getKind()).build());
-			}
-			
-			Cursor cursor = this.entities.openCursor(null, null);
-			return new DatastoreResultSet(cursor, startKey, lowerExclusive, query, predicate);
-		} else if(query.getFilters().size() == 0) {
-			Cursor cursor = this.entities.openCursor(null, null);
-			Indexing.EntityKey startKey = Indexing.EntityKey.newBuilder().setKind(query.getKind()).build();
-			MessagePredicate predicate = new KeyPredicate(startKey);
-			return new DatastoreResultSet(cursor, startKey, false, query, predicate);
-		}
-		return null;
 	}
 
 	public boolean deleteIndex(CompositeIndex idx) throws DatabaseException {
