@@ -56,7 +56,33 @@ public class DatastoreServiceTest {
 			called = true;
 		}		
 	}
-	
+
+	public class TestRpcController implements RpcController {
+		public String errorText() {
+			return null;
+		}
+
+		public boolean failed() {
+			return false;
+		}
+
+		public boolean isCanceled() {
+			return false;
+		}
+
+		public void notifyOnCancel(RpcCallback<Object> arg0) {
+		}
+
+		public void reset() {
+		}
+
+		public void setFailed(String arg0) {
+		}
+
+		public void startCancel() {
+		}
+	}
+
 	// Sample key
 	protected static Entity.Reference testkey = Entity.Reference.newBuilder()
 		.setApp("testapp").setPath(
