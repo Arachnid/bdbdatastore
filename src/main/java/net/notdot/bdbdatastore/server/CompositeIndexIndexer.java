@@ -25,14 +25,20 @@ public class CompositeIndexIndexer implements SecondaryMultiKeyCreator {
 
 	private ByteString kind;
 	private boolean hasAncestor;
+	// Maps property names to offsets in the index key
 	private Map<ByteString, Integer> fields = new HashMap<ByteString, Integer>();
+	// Index of the __key__ property, or -1 if none.
+	private int keyIndex = -1;
 	
 	public CompositeIndexIndexer(Entity.Index idx) {
 		this.kind = idx.getEntityType();
 		this.hasAncestor = idx.getAncestor();
 		
-		for(int i = 0; i < idx.getPropertyCount(); i++)
+		for(int i = 0; i < idx.getPropertyCount(); i++) {
+			if(idx.getProperty(i).getName().equals(QuerySpec.KEY_PROPERTY))
+				this.keyIndex = i;
 			this.fields.put(idx.getProperty(i).getName(), new Integer(i));
+		}
 	}
 
 	@SuppressWarnings("unchecked")
@@ -61,11 +67,16 @@ public class CompositeIndexIndexer implements SecondaryMultiKeyCreator {
 			lists[i] = new ArrayList<Entity.PropertyValue>();
 			entry.addValue(Entity.PropertyValue.getDefaultInstance());
 		}
+		
+		// Set the key property, if any
+		if(this.keyIndex != -1)
+			lists[this.keyIndex].add(EntityKeyComparator.toPropertyValue(entity.getKey()));
 
 		// Populate the lists
 		ByteString current = null;
 		int current_idx = -1;
 		for(Entity.Property value : entity.getPropertyList()) {
+			// Properties are sorted by name, so we can use this optimization
 			if(!value.getName().equals(current)) {
 				current = value.getName();
 				Integer idx = this.fields.get(current);

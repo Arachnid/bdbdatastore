@@ -35,9 +35,6 @@ public class QuerySpec {
 			this.ancestor = query.getAncestor();
 		this.filters = FilterSpec.FromQuery(query);
 		this.orders = query.getOrderList();
-		if(this.orders.size() > 0 && this.orders.get(this.orders.size() - 1).getProperty().equals(KEY_PROPERTY))
-			// __key__ as last sort order is a no-op
-			this.orders.remove(this.orders.size() - 1);
 		if(query.hasOffset())
 			this.offset = query.getOffset();
 		if(query.hasLimit())

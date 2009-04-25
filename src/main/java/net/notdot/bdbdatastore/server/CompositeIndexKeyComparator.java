@@ -35,9 +35,12 @@ public class CompositeIndexKeyComparator implements
 			return 0;
 		}
 		
-		int ret = EntityKeyComparator.comparePaths(o1.getAncestor(), o2.getAncestor());
-		if(ret != 0)
-			return ret;
+		int ret;
+		if(this.hasAncestor) {
+			ret = EntityKeyComparator.comparePaths(o1.getAncestor(), o2.getAncestor());
+			if(ret != 0)
+				return ret;
+		}
 		int minLength = Math.min(o1.getValueCount(), o2.getValueCount());
 		for(int i = 0; i < minLength; i++) {
 			ret = PropertyValueComparator.instance.compare(o1.getValue(i), o2.getValue(i));

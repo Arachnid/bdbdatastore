@@ -7,6 +7,8 @@ import net.notdot.bdbdatastore.Indexing;
 
 import com.google.appengine.entity.Entity;
 import com.google.appengine.entity.Entity.Path;
+import com.google.appengine.entity.Entity.PropertyValue;
+import com.google.appengine.entity.Entity.Reference;
 import com.google.protobuf.ByteString;
 
 public class EntityKeyComparator implements Comparator<Indexing.EntityKey> {
@@ -28,6 +30,21 @@ public class EntityKeyComparator implements Comparator<Indexing.EntityKey> {
 		
 		ByteString kind = elements.get(elements.size() - 1).getType();
 		return Indexing.EntityKey.newBuilder().setKind(kind).setPath(path).build();
+	}
+
+	public static PropertyValue toPropertyValue(Reference key) {
+		Entity.PropertyValue.ReferenceValue.Builder builder = Entity.PropertyValue.ReferenceValue.newBuilder();
+		builder.setApp(key.getApp());
+		for(Entity.Path.Element pathEl : key.getPath().getElementList()) {
+			Entity.PropertyValue.ReferenceValue.PathElement.Builder elt = Entity.PropertyValue.ReferenceValue.PathElement.newBuilder();
+			elt.setType(pathEl.getType());
+			if(pathEl.hasName())
+				elt.setName(pathEl.getName());
+			if(pathEl.hasId())
+				elt.setId(elt.getId());
+			builder.addPathElement(elt);
+		}
+		return Entity.PropertyValue.newBuilder().setReferenceValue(builder).build();
 	}
 	
 	private static int compareElements(Entity.Path.Element e1, Entity.Path.Element e2) {
@@ -76,5 +93,4 @@ public class EntityKeyComparator implements Comparator<Indexing.EntityKey> {
 		}
 		return p1len - p2len;
 	}
-
 }

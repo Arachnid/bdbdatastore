@@ -82,7 +82,7 @@ public class DatastoreServiceTest {
 				Entity.Path.newBuilder().addElement(
 						Entity.Path.Element.newBuilder().setType(ByteString.copyFromUtf8("testtype"))))).build();
 	
-	// Sample composite index
+	// Sample composite indexes
 	Entity.CompositeIndex compositeIdx = Entity.CompositeIndex.newBuilder()
 		.setAppId("testapp")
 		.setId(0)
@@ -104,6 +104,21 @@ public class DatastoreServiceTest {
 			.setAncestor(true))
 		.build();
 	
+	Entity.CompositeIndex compositeKeyIdx = Entity.CompositeIndex.newBuilder()
+	.setAppId("testapp")
+	.setId(0)
+	.setState(Entity.CompositeIndex.State.READ_WRITE) // Ignored
+	.setDefinition(Entity.Index.newBuilder()
+		.setEntityType(ByteString.copyFromUtf8("wtype"))
+		.setAncestor(false)
+		.addProperty(Entity.Index.Property.newBuilder()
+				.setName(ByteString.copyFromUtf8("num"))
+				.setDirection(Entity.Index.Property.Direction.ASCENDING))
+		.addProperty(Entity.Index.Property.newBuilder()
+				.setName(ByteString.copyFromUtf8("__key__"))
+				.setDirection(Entity.Index.Property.Direction.DESCENDING))
+	).build();
+
 	protected File basedir;
 	protected Datastore datastore;
 	protected DatastoreService service;
@@ -704,6 +719,10 @@ public class DatastoreServiceTest {
 		done = new TestRpcCallback<ApiBase.Integer64Proto>();
 		service.createIndex(controller, compositeAncestorIdx, done);
 		
+		controller = new TestRpcController();
+		done = new TestRpcCallback<ApiBase.Integer64Proto>();
+		service.createIndex(controller, compositeKeyIdx, done);
+
 		loadCorpus();
 		
 		// Perform a basic composite index query
@@ -764,6 +783,21 @@ public class DatastoreServiceTest {
 			.build());
 		resultSets.add(new String[] { "foo", "baz" });
 		
+		queries.add(DatastoreV3.Query.newBuilder()
+			.setApp("testapp")
+			.setKind(ByteString.copyFromUtf8("wtype"))
+			.addFilter(DatastoreV3.Query.Filter.newBuilder()
+				.setOp(DatastoreV3.Query.Filter.Operator.EQUAL.getNumber())
+				.addProperty(Entity.Property.newBuilder()
+					.setName(ByteString.copyFromUtf8("num"))
+					.setValue(Entity.PropertyValue.newBuilder()
+						.setInt64Value(3))))
+			.addOrder(DatastoreV3.Query.Order.newBuilder()
+				.setProperty(ByteString.copyFromUtf8("__key__"))
+				.setDirection(DatastoreV3.Query.Order.Direction.DESCENDING.getNumber()))
+			.build());
+		resultSets.add(new String[] { "c", "b" });
+
 		for(int i = 0; i < queries.size(); i++) {
 			DatastoreV3.Query query = queries.get(i);
 			String[] results = resultSets.get(i);
@@ -989,5 +1023,10 @@ public class DatastoreServiceTest {
 		
 		assertEquals(1, query_done.getValue().getResultCount());
 		assertEquals(dataset_put.getEntity(5), query_done.getValue().getResult(0));
+	}
+	
+	@Test
+	public void testCompositeKeyIndex() {
+		
 	}
 }
