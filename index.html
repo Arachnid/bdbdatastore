@@ -45,9 +45,7 @@
         <img border="0" width="90" src="http://github.com/images/modules/download/tar.png"></a>
     </div>
       
-    <h1><a href="http://github.com/Arachnid/bdbdatastore">bdbdatastore</a> 
-      <span class="small">by <a href="http://github.com/Arachnid">Arachnid</a></small></h1>
-
+    <h1><a href="http://github.com/Arachnid/bdbdatastore">bdbdatastore</a></h1>
     <div class="description">
       An alternate datastore backend for App Engine, implemented using BDB JE.
     </div>
@@ -66,7 +64,16 @@ bdbdatastore is intended primarially for use by people who want to host their ow
 
 
     <h2>Download</h2>
-    <p>There's now an 0.1 release available! Installation instructions are
+    <p>There's now an 0.2 release available! Here's the quick-start:</p>
+    <ol>
+      <li><a href="http://cloud.github.com/downloads/Arachnid/bdbdatastore/bdbdatastore-0.2.jar">Download</a> the server.</li>
+      <li>Run it with <code>java -jar bdbdatastore-0.2.jar datastore</code>, where <code>datastore</code> is the directory to store data in.</li>
+      <li>Download the patched <a href="http://github.com/Arachnid/google_appengine/zipball/bdbdatastore">SDK with BDBDatastore support</a>,
+      or, for advanced users, download <a href="http://cloud.github.com/downloads/Arachnid/bdbdatastore/bdbdatastore_dev_appserver-0.2.diff">just the patch</a>.</li>
+      <li>Run dev_appserver with the <code>--bdbdatastore=host</code> argument to tell it to use BDBDatastore.</li>
+      <li>Profit!</li>
+    </ol>
+    <p>Detailed installation instructions are
     <a href="http://wiki.github.com/Arachnid/bdbdatastore/trying-out-bdbdatastore">
     available here</a>.</p>
     <p>
