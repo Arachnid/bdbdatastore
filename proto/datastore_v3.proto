@@ -84,6 +84,12 @@ message Query {
   // if true, the datastore will only run this query if there's an index or
   // set of indices that perfectly match it. if not, it will return an error.
   optional bool require_perfect_plan = 20 [default = false];
+  
+  optional bool keys_only = 21 [default = false];
+  
+  // if specified, the query must be an ancestor query, and the ancestor must
+  // be in the same entity group as the other operations in the transaction.
+  optional Transaction transaction = 22;
 }
 
 message QueryExplanation {

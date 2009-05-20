@@ -800,6 +800,18 @@ public final class DatastoreV3 {
     public boolean hasRequirePerfectPlan() { return hasRequirePerfectPlan; }
     public boolean getRequirePerfectPlan() { return requirePerfectPlan_; }
     
+    // optional bool keys_only = 21 [default = false];
+    private boolean hasKeysOnly;
+    private boolean keysOnly_ = false;
+    public boolean hasKeysOnly() { return hasKeysOnly; }
+    public boolean getKeysOnly() { return keysOnly_; }
+    
+    // optional .com.google.appengine.datastore_v3.Transaction transaction = 22;
+    private boolean hasTransaction;
+    private com.google.appengine.datastore_v3.DatastoreV3.Transaction transaction_ = com.google.appengine.datastore_v3.DatastoreV3.Transaction.getDefaultInstance();
+    public boolean hasTransaction() { return hasTransaction; }
+    public com.google.appengine.datastore_v3.DatastoreV3.Transaction getTransaction() { return transaction_; }
+    
     public static com.google.appengine.datastore_v3.DatastoreV3.Query parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -1196,6 +1208,58 @@ public final class DatastoreV3 {
       public Builder clearRequirePerfectPlan() {
         result.hasRequirePerfectPlan = false;
         result.requirePerfectPlan_ = false;
+        return this;
+      }
+      
+      // optional bool keys_only = 21 [default = false];
+      public boolean hasKeysOnly() {
+        return result.hasKeysOnly();
+      }
+      public boolean getKeysOnly() {
+        return result.getKeysOnly();
+      }
+      public Builder setKeysOnly(boolean value) {
+        result.hasKeysOnly = true;
+        result.keysOnly_ = value;
+        return this;
+      }
+      public Builder clearKeysOnly() {
+        result.hasKeysOnly = false;
+        result.keysOnly_ = false;
+        return this;
+      }
+      
+      // optional .com.google.appengine.datastore_v3.Transaction transaction = 22;
+      public boolean hasTransaction() {
+        return result.hasTransaction();
+      }
+      public com.google.appengine.datastore_v3.DatastoreV3.Transaction getTransaction() {
+        return result.getTransaction();
+      }
+      public Builder setTransaction(com.google.appengine.datastore_v3.DatastoreV3.Transaction value) {
+        result.hasTransaction = true;
+        result.transaction_ = value;
+        return this;
+      }
+      public Builder setTransaction(com.google.appengine.datastore_v3.DatastoreV3.Transaction.Builder builderForValue) {
+        result.hasTransaction = true;
+        result.transaction_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeTransaction(com.google.appengine.datastore_v3.DatastoreV3.Transaction value) {
+        if (result.hasTransaction() &&
+            result.transaction_ != com.google.appengine.datastore_v3.DatastoreV3.Transaction.getDefaultInstance()) {
+          result.transaction_ =
+            com.google.appengine.datastore_v3.DatastoreV3.Transaction.newBuilder(result.transaction_).mergeFrom(value).buildPartial();
+        } else {
+          result.transaction_ = value;
+        }
+        result.hasTransaction = true;
+        return this;
+      }
+      public Builder clearTransaction() {
+        result.hasTransaction = false;
+        result.transaction_ = com.google.appengine.datastore_v3.DatastoreV3.Transaction.getDefaultInstance();
         return this;
       }
     }
@@ -4700,7 +4764,7 @@ public final class DatastoreV3 {
     java.lang.String descriptorData =
       "\n\022datastore_v3.proto\022!com.google.appengi" +
       "ne.datastore_v3\032\014entity.proto\032\016api_base." +
-      "proto\"\035\n\013Transaction\022\016\n\006handle\030\001 \002(\006\"\253\005\n" +
+      "proto\"\035\n\013Transaction\022\016\n\006handle\030\001 \002(\006\"\212\006\n" +
       "\005Query\022\013\n\003app\030\001 \002(\t\022\014\n\004kind\030\003 \001(\014\0228\n\010anc" +
       "estor\030\021 \001(\0132&.com.google.appengine.entit" +
       "y.Reference\022?\n\006filter\030\004 \003(\n2/.com.google" +
@@ -4710,90 +4774,93 @@ public final class DatastoreV3 {
       "r\022\021\n\006offset\030\014 \001(\005:\0010\022\r\n\005limit\030\020 \001(\005\022D\n\017c" +
       "omposite_index\030\023 \003(\0132+.com.google.appeng" +
       "ine.entity.CompositeIndex\022#\n\024require_per" +
-      "fect_plan\030\024 \001(\010:\005false\032\314\001\n\006Filter\022\n\n\002op\030" +
-      "\006 \002(\005\0227\n\010property\030\016 \003(\0132%.com.google.app" +
-      "engine.entity.Property\"}\n\010Operator\022\r\n\tLE" +
-      "SS_THAN\020\001\022\026\n\022LESS_THAN_OR_EQUAL\020\002\022\020\n\014GRE" +
-      "ATER_THAN\020\003\022\031\n\025GREATER_THAN_OR_EQUAL\020\004\022\t" +
-      "\n\005EQUAL\020\005\022\006\n\002IN\020\006\022\n\n\006EXISTS\020\007\032[\n\005Order\022\020" +
-      "\n\010property\030\n \002(\014\022\024\n\tdirection\030\013 \001(\005:\0011\"*" +
-      "\n\tDirection\022\r\n\tASCENDING\020\001\022\016\n\nDESCENDING" +
-      "\020\002\"\231\001\n\020QueryExplanation\022\036\n\017native_ancest" +
-      "or\030\001 \001(\010:\005false\0228\n\014native_index\030\002 \003(\0132\"." +
-      "com.google.appengine.entity.Index\022\025\n\rnat" +
-      "ive_offset\030\003 \001(\005\022\024\n\014native_limit\030\004 \001(\005\"\030" +
-      "\n\006Cursor\022\016\n\006cursor\030\001 \002(\006\"r\n\005Error\"i\n\tErr" +
-      "orCode\022\017\n\013BAD_REQUEST\020\001\022\032\n\026CONCURRENT_TR" +
-      "ANSACTION\020\002\022\022\n\016INTERNAL_ERROR\020\003\022\016\n\nNEED_" +
-      "INDEX\020\004\022\013\n\007TIMEOUT\020\005\"\206\001\n\nGetRequest\0223\n\003k" +
-      "ey\030\001 \003(\0132&.com.google.appengine.entity.R" +
-      "eference\022C\n\013transaction\030\002 \001(\0132..com.goog" +
-      "le.appengine.datastore_v3.Transaction\"\230\001" +
-      "\n\013GetResponse\022E\n\006entity\030\001 \003(\n25.com.goog" +
-      "le.appengine.datastore_v3.GetResponse.En" +
-      "tity\032B\n\006Entity\0228\n\006entity\030\002 \001(\0132(.com.goo" +
-      "gle.appengine.entity.EntityProto\"\321\001\n\nPut" +
-      "Request\0228\n\006entity\030\001 \003(\0132(.com.google.app" +
-      "engine.entity.EntityProto\022C\n\013transaction" +
-      "\030\002 \001(\0132..com.google.appengine.datastore_" +
-      "v3.Transaction\022D\n\017composite_index\030\003 \003(\0132" +
-      "+.com.google.appengine.entity.CompositeI" +
-      "ndex\"B\n\013PutResponse\0223\n\003key\030\001 \003(\0132&.com.g" +
-      "oogle.appengine.entity.Reference\"\211\001\n\rDel" +
-      "eteRequest\0223\n\003key\030\006 \003(\0132&.com.google.app" +
-      "engine.entity.Reference\022C\n\013transaction\030\005" +
+      "fect_plan\030\024 \001(\010:\005false\022\030\n\tkeys_only\030\025 \001(" +
+      "\010:\005false\022C\n\013transaction\030\026 \001(\0132..com.goog" +
+      "le.appengine.datastore_v3.Transaction\032\314\001" +
+      "\n\006Filter\022\n\n\002op\030\006 \002(\005\0227\n\010property\030\016 \003(\0132%" +
+      ".com.google.appengine.entity.Property\"}\n" +
+      "\010Operator\022\r\n\tLESS_THAN\020\001\022\026\n\022LESS_THAN_OR" +
+      "_EQUAL\020\002\022\020\n\014GREATER_THAN\020\003\022\031\n\025GREATER_TH" +
+      "AN_OR_EQUAL\020\004\022\t\n\005EQUAL\020\005\022\006\n\002IN\020\006\022\n\n\006EXIS" +
+      "TS\020\007\032[\n\005Order\022\020\n\010property\030\n \002(\014\022\024\n\tdirec" +
+      "tion\030\013 \001(\005:\0011\"*\n\tDirection\022\r\n\tASCENDING\020" +
+      "\001\022\016\n\nDESCENDING\020\002\"\231\001\n\020QueryExplanation\022\036" +
+      "\n\017native_ancestor\030\001 \001(\010:\005false\0228\n\014native" +
+      "_index\030\002 \003(\0132\".com.google.appengine.enti" +
+      "ty.Index\022\025\n\rnative_offset\030\003 \001(\005\022\024\n\014nativ" +
+      "e_limit\030\004 \001(\005\"\030\n\006Cursor\022\016\n\006cursor\030\001 \002(\006\"" +
+      "r\n\005Error\"i\n\tErrorCode\022\017\n\013BAD_REQUEST\020\001\022\032" +
+      "\n\026CONCURRENT_TRANSACTION\020\002\022\022\n\016INTERNAL_E" +
+      "RROR\020\003\022\016\n\nNEED_INDEX\020\004\022\013\n\007TIMEOUT\020\005\"\206\001\n\n" +
+      "GetRequest\0223\n\003key\030\001 \003(\0132&.com.google.app" +
+      "engine.entity.Reference\022C\n\013transaction\030\002" +
       " \001(\0132..com.google.appengine.datastore_v3" +
-      ".Transaction\"Z\n\013NextRequest\0229\n\006cursor\030\001 " +
-      "\002(\0132).com.google.appengine.datastore_v3." +
-      "Cursor\022\020\n\005count\030\002 \001(\005:\0011\"\230\001\n\013QueryResult" +
-      "\0229\n\006cursor\030\001 \001(\0132).com.google.appengine." +
-      "datastore_v3.Cursor\0228\n\006result\030\002 \003(\0132(.co" +
-      "m.google.appengine.entity.EntityProto\022\024\n" +
-      "\014more_results\030\003 \002(\010\"@\n\006Schema\0226\n\004kind\030\001 " +
-      "\003(\0132(.com.google.appengine.entity.Entity" +
-      "Proto\"N\n\020CompositeIndices\022:\n\005index\030\001 \003(\013" +
-      "2+.com.google.appengine.entity.Composite" +
-      "Index2\331\014\n\020DatastoreService\022d\n\003Get\022-.com." +
-      "google.appengine.datastore_v3.GetRequest" +
-      "\032..com.google.appengine.datastore_v3.Get" +
-      "Response\022d\n\003Put\022-.com.google.appengine.d" +
-      "atastore_v3.PutRequest\032..com.google.appe" +
-      "ngine.datastore_v3.PutResponse\022`\n\006Delete" +
-      "\0220.com.google.appengine.datastore_v3.Del" +
-      "eteRequest\032$.com.google.appengine.base.V" +
-      "oidProto\022d\n\010RunQuery\022(.com.google.appeng" +
-      "ine.datastore_v3.Query\032..com.google.appe" +
-      "ngine.datastore_v3.QueryResult\022f\n\004Next\022." +
-      ".com.google.appengine.datastore_v3.NextR" +
-      "equest\032..com.google.appengine.datastore_" +
-      "v3.QueryResult\022\\\n\005Count\022(.com.google.app" +
-      "engine.datastore_v3.Query\032).com.google.a" +
-      "ppengine.base.Integer64Proto\022h\n\007Explain\022" +
-      "(.com.google.appengine.datastore_v3.Quer" +
-      "y\0323.com.google.appengine.datastore_v3.Qu" +
-      "eryExplanation\022_\n\014DeleteCursor\022).com.goo" +
-      "gle.appengine.datastore_v3.Cursor\032$.com." +
-      "google.appengine.base.VoidProto\022h\n\020Begin" +
-      "Transaction\022$.com.google.appengine.base." +
-      "VoidProto\032..com.google.appengine.datasto" +
-      "re_v3.Transaction\022^\n\006Commit\022..com.google" +
-      ".appengine.datastore_v3.Transaction\032$.co" +
-      "m.google.appengine.base.VoidProto\022`\n\010Rol" +
-      "lback\022..com.google.appengine.datastore_v" +
-      "3.Transaction\032$.com.google.appengine.bas" +
-      "e.VoidProto\022^\n\tGetSchema\022&.com.google.ap" +
-      "pengine.base.StringProto\032).com.google.ap" +
-      "pengine.datastore_v3.Schema\022e\n\013CreateInd" +
-      "ex\022+.com.google.appengine.entity.Composi" +
-      "teIndex\032).com.google.appengine.base.Inte" +
-      "ger64Proto\022`\n\013UpdateIndex\022+.com.google.a" +
-      "ppengine.entity.CompositeIndex\032$.com.goo" +
-      "gle.appengine.base.VoidProto\022i\n\nGetIndic" +
-      "es\022&.com.google.appengine.base.StringPro" +
-      "to\0323.com.google.appengine.datastore_v3.C" +
-      "ompositeIndices\022`\n\013DeleteIndex\022+.com.goo" +
-      "gle.appengine.entity.CompositeIndex\032$.co" +
-      "m.google.appengine.base.VoidProto";
+      ".Transaction\"\230\001\n\013GetResponse\022E\n\006entity\030\001" +
+      " \003(\n25.com.google.appengine.datastore_v3" +
+      ".GetResponse.Entity\032B\n\006Entity\0228\n\006entity\030" +
+      "\002 \001(\0132(.com.google.appengine.entity.Enti" +
+      "tyProto\"\321\001\n\nPutRequest\0228\n\006entity\030\001 \003(\0132(" +
+      ".com.google.appengine.entity.EntityProto" +
+      "\022C\n\013transaction\030\002 \001(\0132..com.google.appen" +
+      "gine.datastore_v3.Transaction\022D\n\017composi" +
+      "te_index\030\003 \003(\0132+.com.google.appengine.en" +
+      "tity.CompositeIndex\"B\n\013PutResponse\0223\n\003ke" +
+      "y\030\001 \003(\0132&.com.google.appengine.entity.Re" +
+      "ference\"\211\001\n\rDeleteRequest\0223\n\003key\030\006 \003(\0132&" +
+      ".com.google.appengine.entity.Reference\022C" +
+      "\n\013transaction\030\005 \001(\0132..com.google.appengi" +
+      "ne.datastore_v3.Transaction\"Z\n\013NextReque" +
+      "st\0229\n\006cursor\030\001 \002(\0132).com.google.appengin" +
+      "e.datastore_v3.Cursor\022\020\n\005count\030\002 \001(\005:\0011\"" +
+      "\230\001\n\013QueryResult\0229\n\006cursor\030\001 \001(\0132).com.go" +
+      "ogle.appengine.datastore_v3.Cursor\0228\n\006re" +
+      "sult\030\002 \003(\0132(.com.google.appengine.entity" +
+      ".EntityProto\022\024\n\014more_results\030\003 \002(\010\"@\n\006Sc" +
+      "hema\0226\n\004kind\030\001 \003(\0132(.com.google.appengin" +
+      "e.entity.EntityProto\"N\n\020CompositeIndices" +
+      "\022:\n\005index\030\001 \003(\0132+.com.google.appengine.e" +
+      "ntity.CompositeIndex2\331\014\n\020DatastoreServic" +
+      "e\022d\n\003Get\022-.com.google.appengine.datastor" +
+      "e_v3.GetRequest\032..com.google.appengine.d" +
+      "atastore_v3.GetResponse\022d\n\003Put\022-.com.goo" +
+      "gle.appengine.datastore_v3.PutRequest\032.." +
+      "com.google.appengine.datastore_v3.PutRes" +
+      "ponse\022`\n\006Delete\0220.com.google.appengine.d" +
+      "atastore_v3.DeleteRequest\032$.com.google.a" +
+      "ppengine.base.VoidProto\022d\n\010RunQuery\022(.co" +
+      "m.google.appengine.datastore_v3.Query\032.." +
+      "com.google.appengine.datastore_v3.QueryR" +
+      "esult\022f\n\004Next\022..com.google.appengine.dat" +
+      "astore_v3.NextRequest\032..com.google.appen" +
+      "gine.datastore_v3.QueryResult\022\\\n\005Count\022(" +
+      ".com.google.appengine.datastore_v3.Query" +
+      "\032).com.google.appengine.base.Integer64Pr" +
+      "oto\022h\n\007Explain\022(.com.google.appengine.da" +
+      "tastore_v3.Query\0323.com.google.appengine." +
+      "datastore_v3.QueryExplanation\022_\n\014DeleteC" +
+      "ursor\022).com.google.appengine.datastore_v" +
+      "3.Cursor\032$.com.google.appengine.base.Voi" +
+      "dProto\022h\n\020BeginTransaction\022$.com.google." +
+      "appengine.base.VoidProto\032..com.google.ap" +
+      "pengine.datastore_v3.Transaction\022^\n\006Comm" +
+      "it\022..com.google.appengine.datastore_v3.T" +
+      "ransaction\032$.com.google.appengine.base.V" +
+      "oidProto\022`\n\010Rollback\022..com.google.appeng" +
+      "ine.datastore_v3.Transaction\032$.com.googl" +
+      "e.appengine.base.VoidProto\022^\n\tGetSchema\022" +
+      "&.com.google.appengine.base.StringProto\032" +
+      ").com.google.appengine.datastore_v3.Sche" +
+      "ma\022e\n\013CreateIndex\022+.com.google.appengine" +
+      ".entity.CompositeIndex\032).com.google.appe" +
+      "ngine.base.Integer64Proto\022`\n\013UpdateIndex" +
+      "\022+.com.google.appengine.entity.Composite" +
+      "Index\032$.com.google.appengine.base.VoidPr" +
+      "oto\022i\n\nGetIndices\022&.com.google.appengine" +
+      ".base.StringProto\0323.com.google.appengine" +
+      ".datastore_v3.CompositeIndices\022`\n\013Delete" +
+      "Index\022+.com.google.appengine.entity.Comp" +
+      "ositeIndex\032$.com.google.appengine.base.V" +
+      "oidProto";
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
@@ -4812,7 +4879,7 @@ public final class DatastoreV3 {
           internal_static_com_google_appengine_datastore_v3_Query_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_com_google_appengine_datastore_v3_Query_descriptor,
-              new java.lang.String[] { "App", "Kind", "Ancestor", "Filter", "SearchQuery", "Order", "Offset", "Limit", "CompositeIndex", "RequirePerfectPlan", },
+              new java.lang.String[] { "App", "Kind", "Ancestor", "Filter", "SearchQuery", "Order", "Offset", "Limit", "CompositeIndex", "RequirePerfectPlan", "KeysOnly", "Transaction", },
               com.google.appengine.datastore_v3.DatastoreV3.Query.class,
               com.google.appengine.datastore_v3.DatastoreV3.Query.Builder.class);
           internal_static_com_google_appengine_datastore_v3_Query_Filter_descriptor =
