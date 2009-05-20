@@ -4,7 +4,11 @@ import getpass
 import os
 import sys
 
-sys.path.append("/Applications/GoogleAppEngineLauncher.app/Contents/Resources/GoogleAppEngine-default.bundle/Contents/Resources/google_appengine")
+base_path = "/Applications/GoogleAppEngineLauncher.app/Contents/Resources/GoogleAppEngine-default.bundle/Contents/Resources/google_appengine"
+sys.path.append(base_path)
+sys.path.append(base_path + "/lib/yaml/lib")
+sys.path.append(base_path + "/lib/webob")
+sys.path.append(base_path + "/lib/django")
 
 from google.appengine.api import apiproxy_stub_map
 from google.appengine.ext import db
