@@ -60,8 +60,9 @@ class SocketApiProxyStub(object):
     self._next_rpc_id = 0
   
   def closeSession(self):
-    self._sock.close()
-    self._sock = None
+    if self._sock:
+      self._sock.close()
+      self._sock = None
 
   def _recvAll(self, size):
     # We should use buffers here, but can't in the dev_appserver.
