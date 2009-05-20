@@ -685,11 +685,12 @@ public class DatastoreServiceTest {
 			.setApp("testapp")
 			.setKind(ByteString.copyFromUtf8("wtype"))
 			.addOrder(DatastoreV3.Query.Order.newBuilder().setProperty(ByteString.copyFromUtf8("num")))
+			.setLimit(3)
 			.build();
 		TestRpcCallback<ApiBase.Integer64Proto> done = new TestRpcCallback<ApiBase.Integer64Proto>();
 		service.count(controller, query, done);
 		assertTrue(done.isCalled());
-		assertEquals(4, done.getValue().getValue());
+		assertEquals(3, done.getValue().getValue());
 	}
 	
 	@Test
