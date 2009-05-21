@@ -97,20 +97,23 @@ class SocketApiProxyStub(object):
       
       response_wrapper = rpc_pb2.Response()
       self._readPB(response_wrapper)
-      assert response_wrapper.rpc_id == request_wrapper.rpc_id
-      
-      if response_wrapper.status == APPLICATION_ERROR:
-        raise apiproxy_errors.ApplicationError(
-            response_wrapper.application_error,
-            response_wrapper.error_detail)
-      elif response_wrapper.status in _ExceptionsMap:
-        ex, message = _ExceptionsMap[response_wrapper.status]
-        raise ex(message % (service, method))
-      else:
-        response.ParseFromString(response_wrapper.body)
-    except socket.error, e:
+    except:
+      # Any exception here should cause us to close the socket to make sure we
+      # don't leave it in an unknown state.
       self.closeSession()
       raise
+
+    assert response_wrapper.rpc_id == request_wrapper.rpc_id
+    
+    if response_wrapper.status == APPLICATION_ERROR:
+      raise apiproxy_errors.ApplicationError(
+          response_wrapper.application_error,
+          response_wrapper.error_detail)
+    elif response_wrapper.status in _ExceptionsMap:
+      ex, message = _ExceptionsMap[response_wrapper.status]
+      raise ex(message % (service, method))
+    else:
+      response.ParseFromString(response_wrapper.body)
   
   def MakeSyncCall(self, service, call, request, response):
     if not self._sock:
