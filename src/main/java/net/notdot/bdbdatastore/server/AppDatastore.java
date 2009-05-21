@@ -412,6 +412,9 @@ public class AppDatastore {
 		Entity.Index index = query.getIndex();
 		if(index.getPropertyCount() > 1)
 			return null;
+		// We don't do descending sort orders
+		if(index.getPropertyCount() == 1 && index.getProperty(0).getDirection() != Entity.Index.Property.Direction.ASCENDING)
+			return null;
 		
 		List<Entity.PropertyValue> values = new ArrayList<Entity.PropertyValue>(1);
 		Indexing.PropertyIndexKey.Builder lowerBound = Indexing.PropertyIndexKey.newBuilder()
