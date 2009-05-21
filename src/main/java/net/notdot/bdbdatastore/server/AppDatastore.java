@@ -312,10 +312,10 @@ public class AppDatastore {
 		ret = getSinglePropertyQueryPlan(query);
 		if(ret != null)
 			return ret;
-		ret = getMergeJoinQueryPlan(query);
+		ret = getCompositeIndexPlan(query);
 		if(ret != null)
 			return ret;
-		ret = getCompositeIndexPlan(query);
+		ret = getMergeJoinQueryPlan(query);
 		if(ret != null)
 			return ret;
 		return null;
