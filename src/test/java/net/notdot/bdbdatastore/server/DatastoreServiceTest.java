@@ -124,6 +124,24 @@ public class DatastoreServiceTest {
 					.setDirection(Entity.Index.Property.Direction.DESCENDING))
 		).build();
 	
+	Entity.CompositeIndex compositeMultiIdx = Entity.CompositeIndex.newBuilder()
+	.setAppId("testapp")
+	.setId(0)
+	.setState(Entity.CompositeIndex.State.READ_WRITE) // Ignored
+	.setDefinition(Entity.Index.newBuilder()
+		.setEntityType(ByteString.copyFromUtf8("xtype"))
+		.setAncestor(false)
+		.addProperty(Entity.Index.Property.newBuilder()
+			.setName(ByteString.copyFromUtf8("b"))
+			.setDirection(Entity.Index.Property.Direction.ASCENDING))
+		.addProperty(Entity.Index.Property.newBuilder()
+			.setName(ByteString.copyFromUtf8("a"))
+			.setDirection(Entity.Index.Property.Direction.ASCENDING))
+		.addProperty(Entity.Index.Property.newBuilder()
+				.setName(ByteString.copyFromUtf8("c"))
+				.setDirection(Entity.Index.Property.Direction.DESCENDING))
+	).build();
+
 	Entity.CompositeIndex compositeAncestorIdx = Entity.CompositeIndex.newBuilder(compositeIdx)
 		.setDefinition(Entity.Index.newBuilder(compositeIdx.getDefinition())
 			.setEntityType(ByteString.copyFromUtf8("vtype"))
@@ -744,6 +762,10 @@ public class DatastoreServiceTest {
 		
 		controller = new TestRpcController();
 		done = new TestRpcCallback<ApiBase.Integer64Proto>();
+		service.createIndex(controller, compositeMultiIdx, done);
+
+		controller = new TestRpcController();
+		done = new TestRpcCallback<ApiBase.Integer64Proto>();
 		service.createIndex(controller, compositeAncestorIdx, done);
 		
 		controller = new TestRpcController();
@@ -825,6 +847,27 @@ public class DatastoreServiceTest {
 			.build());
 		resultSets.add(new String[] { "c", "b" });
 
+		queries.add(DatastoreV3.Query.newBuilder()
+				.setApp("testapp")
+				.setKind(ByteString.copyFromUtf8("xtype"))
+				.addFilter(DatastoreV3.Query.Filter.newBuilder()
+					.setOp(DatastoreV3.Query.Filter.Operator.EQUAL.getNumber())
+					.addProperty(Entity.Property.newBuilder()
+						.setName(ByteString.copyFromUtf8("b"))
+						.setValue(Entity.PropertyValue.newBuilder()
+							.setInt64Value(42))))
+				.addFilter(DatastoreV3.Query.Filter.newBuilder()
+					.setOp(DatastoreV3.Query.Filter.Operator.EQUAL.getNumber())
+					.addProperty(Entity.Property.newBuilder()
+						.setName(ByteString.copyFromUtf8("a"))
+						.setValue(Entity.PropertyValue.newBuilder()
+							.setInt64Value(10))))
+				.addOrder(DatastoreV3.Query.Order.newBuilder()
+					.setProperty(ByteString.copyFromUtf8("c"))
+					.setDirection(DatastoreV3.Query.Order.Direction.DESCENDING.getNumber()))
+				.build());
+			resultSets.add(new String[] { "b", "a" });
+		
 		for(int i = 0; i < queries.size(); i++) {
 			DatastoreV3.Query query = queries.get(i);
 			String[] results = resultSets.get(i);
@@ -910,7 +953,7 @@ public class DatastoreServiceTest {
 		
 		loadCorpus();
 		
-		String[] kinds = new String[] { "sss", "testtype", "uuu", "vtype", "wtype" };
+		String[] kinds = new String[] { "sss", "testtype", "uuu", "vtype", "wtype", "xtype" };
 		
 		TestRpcCallback<DatastoreV3.Schema> done = new TestRpcCallback<DatastoreV3.Schema>();
 		service.getSchema(controller, ApiBase.StringProto.newBuilder().setValue("testapp").build(), done);

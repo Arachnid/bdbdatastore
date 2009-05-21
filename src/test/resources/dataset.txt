@@ -371,3 +371,73 @@ entity {
     }
   }
 }
+entity {
+  key {
+    app: "testapp"
+    path {
+      Element {
+        type: "xtype"
+        name: "a"
+      }
+    }
+  }
+  entity_group {
+    Element {
+      type: "xtype"
+      name: "a"
+    }
+  }
+  property {
+    name: "a"
+    value {
+      int64Value: 10
+    }
+  }
+  property {
+    name: "b"
+    value {
+      int64Value: 42
+    }
+  }
+  property {
+    name: "c"
+    value {
+      int64Value: 12
+    }
+  }
+}
+entity {
+  key {
+    app: "testapp"
+    path {
+      Element {
+        type: "xtype"
+        name: "b"
+      }
+    }
+  }
+  entity_group {
+    Element {
+      type: "xtype"
+      name: "b"
+    }
+  }
+  property {
+    name: "a"
+    value {
+      int64Value: 10
+    }
+  }
+  property {
+    name: "b"
+    value {
+      int64Value: 42
+    }
+  }
+  property {
+    name: "c"
+    value {
+      int64Value: 14
+    }
+  }
+}
