@@ -322,8 +322,14 @@ public class AppDatastore {
 	}
 
 	private AbstractDatastoreResultSet getCompositeIndexPlan(QuerySpec query) throws DatabaseException {
-		Entity.Index idx = query.getIndex();
-		SecondaryDatabase idxDb = this.indexes.get(idx);
+		Entity.Index idx = null;
+		SecondaryDatabase idxDb = null;
+		for(Map.Entry<Entity.Index, SecondaryDatabase> entry : this.indexes.entrySet()) {
+			if(query.isValidIndex(entry.getKey())) {
+				idx = entry.getKey();
+				idxDb = entry.getValue();
+			}
+		}
 		if(idxDb == null)
 			return null;
 		
