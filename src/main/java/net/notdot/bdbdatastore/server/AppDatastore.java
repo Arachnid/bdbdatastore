@@ -570,7 +570,8 @@ public class AppDatastore {
 				}
 				entity.addProperty(Entity.Property.newBuilder()
 					.setName(propertyKey.getName())
-					.setValue(Entity.PropertyValue.getDefaultInstance()));
+					.setValue(Entity.PropertyValue.getDefaultInstance())
+					.setMultiple(false));
 
 				// Assemble a key that's greater than this one
 				byte[] newName = new byte[propertyKey.getName().size() + 1];
