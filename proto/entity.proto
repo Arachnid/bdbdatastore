@@ -107,7 +107,7 @@ message Property {
   // This is currently used as sugar for the native language datastore APIs,
   // so they know whether to return a property value as a single value or a
   // list.
-  required bool multiple = 4;
+  optional bool multiple = 4;
 }
 
 // A path; also used as an Entity Group key.  This is an ordered list
