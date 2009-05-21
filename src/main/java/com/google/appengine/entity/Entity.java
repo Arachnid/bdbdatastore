@@ -1355,7 +1355,7 @@ public final class Entity {
     public boolean hasValue() { return hasValue; }
     public com.google.appengine.entity.Entity.PropertyValue getValue() { return value_; }
     
-    // required bool multiple = 4;
+    // optional bool multiple = 4;
     private boolean hasMultiple;
     private boolean multiple_ = false;
     public boolean hasMultiple() { return hasMultiple; }
@@ -1559,7 +1559,7 @@ public final class Entity {
         return this;
       }
       
-      // required bool multiple = 4;
+      // optional bool multiple = 4;
       public boolean hasMultiple() {
         return result.hasMultiple();
       }
@@ -4040,7 +4040,7 @@ public final class Entity {
       "pengine.entity.Property.Meaning\022\023\n\013meani" +
       "ng_uri\030\002 \001(\014\022\014\n\004name\030\003 \002(\014\0229\n\005value\030\005 \002(" +
       "\0132*.com.google.appengine.entity.Property" +
-      "Value\022\020\n\010multiple\030\004 \002(\010\"\365\001\n\007Meaning\022\010\n\004B" +
+      "Value\022\020\n\010multiple\030\004 \001(\010\"\365\001\n\007Meaning\022\010\n\004B" +
       "LOB\020\016\022\010\n\004TEXT\020\017\022\021\n\rATOM_CATEGORY\020\001\022\r\n\tAT" +
       "OM_LINK\020\002\022\016\n\nATOM_TITLE\020\003\022\020\n\014ATOM_CONTEN" +
       "T\020\004\022\020\n\014ATOM_SUMMARY\020\005\022\017\n\013ATOM_AUTHOR\020\006\022\013" +
