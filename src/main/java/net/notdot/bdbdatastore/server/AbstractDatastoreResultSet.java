@@ -24,7 +24,7 @@ public abstract class AbstractDatastoreResultSet {
 	public AbstractDatastoreResultSet(QuerySpec query) throws DatabaseException {
 		this.query = query;
 		
-		this.remaining = query.getLimit();
+		this.remaining = query.getOffset() + query.getLimit();
 	}
 
 	protected void skip(int count) throws DatabaseException {

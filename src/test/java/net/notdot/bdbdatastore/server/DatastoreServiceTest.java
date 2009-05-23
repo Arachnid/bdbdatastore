@@ -434,7 +434,8 @@ public class DatastoreServiceTest {
 		// Construct a query for a kind
 		DatastoreV3.Query query = DatastoreV3.Query.newBuilder()
 			.setApp("testapp")
-			.setKind(ByteString.copyFromUtf8("testtype")).build();
+			.setKind(ByteString.copyFromUtf8("testtype"))
+			.setOffset(1).setLimit(1).build();
 		TestRpcCallback<DatastoreV3.QueryResult> query_done = new TestRpcCallback<DatastoreV3.QueryResult>();
 		service.runQuery(controller, query, query_done);
 		assertTrue(query_done.isCalled());
@@ -444,14 +445,13 @@ public class DatastoreServiceTest {
 		controller = new TestRpcController();
 		DatastoreV3.NextRequest next = DatastoreV3.NextRequest.newBuilder()
 			.setCursor(query_done.getValue().getCursor())
-			.setCount(5).build();
+			.setCount(1).build();
 		query_done = new TestRpcCallback<DatastoreV3.QueryResult>();
 		service.next(controller, next, query_done);
 		assertTrue(query_done.isCalled());
 		
-		assertEquals(2, query_done.getValue().getResultCount());
-		assertEquals(dataset_put.getEntity(1), query_done.getValue().getResult(0));
-		assertEquals(dataset_put.getEntity(2), query_done.getValue().getResult(1));
+		assertEquals(1, query_done.getValue().getResultCount());
+		assertEquals(dataset_put.getEntity(2), query_done.getValue().getResult(0));
 		
 		// Delete the cursor
 		controller = new TestRpcController();
