@@ -34,6 +34,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.RpcCallback;
 import com.sleepycat.je.Cursor;
+import com.sleepycat.je.CursorConfig;
 import com.sleepycat.je.Database;
 import com.sleepycat.je.DatabaseConfig;
 import com.sleepycat.je.DatabaseEntry;
@@ -289,6 +290,7 @@ public class AppDatastore {
 
 	public Transaction newTransaction() throws DatabaseException {
 		TransactionConfig conf = new TransactionConfig();
+		conf.setReadCommitted(true);
 		return this.env.beginTransaction(null, conf);
 	}
 
@@ -348,7 +350,7 @@ public class AppDatastore {
 			upperBound.setAncestor(query.getAncestor().getPath());
 		}
 		
-		Cursor cursor = idxDb.openCursor(null, null);
+		Cursor cursor = idxDb.openCursor(null, this.getCursorConfig());
 		MessagePredicate predicate = new CompositeIndexPredicate(idx, upperBound.build(), exclusiveMax);
 		return new DatastoreResultSet(cursor, lowerBound.build(), exclusiveMin, query, predicate);
 	}
@@ -383,7 +385,7 @@ public class AppDatastore {
 				.setName(index.getProperty(i).getName())
 				.setValue(values.get(i))
 				.build();
-			cursors[i] = this.entities_by_property.openCursor(null, null);
+			cursors[i] = this.entities_by_property.openCursor(null, this.getCursorConfig());
 			
 			// Find the requested entry
 			DatabaseEntry key = new DatabaseEntry(startKey.toByteArray());
@@ -439,7 +441,7 @@ public class AppDatastore {
 			return null;
 		}
 		
-		Cursor cursor = this.entities_by_property.openCursor(null, null);
+		Cursor cursor = this.entities_by_property.openCursor(null, this.getCursorConfig());
 		MessagePredicate predicate = new PropertyIndexPredicate(upperBound.build(), exclusiveMax);
 		return new DatastoreResultSet(cursor, lowerBound.build(), exclusiveMin, query, predicate);
 	}
@@ -510,7 +512,7 @@ public class AppDatastore {
 		if(endKey != null && predicate.evaluate(endKey))
 			predicate = new KeyRangePredicate(endKey, upperExclusive);
 		
-		Cursor cursor = this.entities.openCursor(null, null);
+		Cursor cursor = this.entities.openCursor(null, this.getCursorConfig());
 		return new DatastoreResultSet(cursor, startKey, lowerExclusive, query, predicate);
 	}
 
@@ -554,7 +556,7 @@ public class AppDatastore {
 	}
 
 	public Schema getSchema() throws DatabaseException {
-		SecondaryCursor cursor = this.entities_by_property.openSecondaryCursor(null, null);
+		SecondaryCursor cursor = this.entities_by_property.openSecondaryCursor(null, this.getCursorConfig());
 		DatabaseEntry key = new DatabaseEntry();
 		DatabaseEntry data = new DatabaseEntry();
 		DatastoreV3.Schema.Builder schema = DatastoreV3.Schema.newBuilder();
@@ -598,5 +600,9 @@ public class AppDatastore {
 			schema.addKind(entity);
 
 		return schema.build();
+	}
+
+	private CursorConfig getCursorConfig() {
+		return CursorConfig.READ_COMMITTED;
 	}
 }
