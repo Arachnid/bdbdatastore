@@ -1095,8 +1095,42 @@ public class DatastoreServiceTest {
 		assertEquals(dataset_put.getEntity(5), query_done.getValue().getResult(0));
 	}
 	
-	@Test
-	public void testCompositeKeyIndex() {
+    @Test
+    public void testDeleteQueryResults() throws ParseException, FileNotFoundException, IOException {
+		RpcController controller = new TestRpcController();
+
+		loadCorpus();
 		
-	}
+		// Construct a query for a kind
+		DatastoreV3.Query query = DatastoreV3.Query.newBuilder()
+			.setApp("testapp")
+			.setKind(ByteString.copyFromUtf8("testtype")).build();
+		TestRpcCallback<DatastoreV3.QueryResult> query_done = new TestRpcCallback<DatastoreV3.QueryResult>();
+		service.runQuery(controller, query, query_done);
+		assertTrue(query_done.isCalled());
+		assertTrue(service.cursors.containsKey(query_done.getValue().getCursor()));
+		
+		// Get the results
+		controller = new TestRpcController();
+		DatastoreV3.NextRequest next = DatastoreV3.NextRequest.newBuilder()
+			.setCursor(query_done.getValue().getCursor())
+			.setCount(2).build();
+		query_done = new TestRpcCallback<DatastoreV3.QueryResult>();
+		service.next(controller, next, query_done);
+		assertTrue(query_done.isCalled());
+		
+		for(Entity.EntityProto result : query_done.getValue().getResultList()) {
+			controller = new TestRpcController();
+			TestRpcCallback<ApiBase.VoidProto> delete_done = new TestRpcCallback<ApiBase.VoidProto>();
+			service.delete(controller, DatastoreV3.DeleteRequest.newBuilder().addKey(result.getKey()).build(), delete_done);
+			assertTrue(delete_done.isCalled());
+		}
+		
+		// Delete the cursor
+		controller = new TestRpcController();
+		TestRpcCallback<ApiBase.VoidProto> deletecursor_done = new TestRpcCallback<ApiBase.VoidProto>();
+		service.deleteCursor(controller, query_done.getValue().getCursor(), deletecursor_done);
+		assertTrue(deletecursor_done.isCalled());
+		assertFalse(service.cursors.containsKey(query_done.getValue().getCursor()));
+    }
 }
