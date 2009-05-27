@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -163,50 +164,71 @@ public class QuerySpec {
 
     public boolean getBounds(Entity.Index idx, int direction, List<Entity.PropertyValue> bounds) {
 		boolean exclusiveBound = false;
+		Map<ByteString, List<FilterSpec>> filters = new HashMap<ByteString, List<FilterSpec>>();
+
+		// Duplicate the filters list
+		for(Map.Entry<ByteString, List<FilterSpec>> entry : this.filters.entrySet())
+			filters.put(entry.getKey(), new ArrayList<FilterSpec>(entry.getValue()));
 		
 		for(Entity.Index.Property prop : idx.getPropertyList()) {
 			int currentDirection = direction * (prop.getDirection()==Entity.Index.Property.Direction.ASCENDING?1:-1);
-			List<FilterSpec> filterList = this.filters.get(prop.getName());
-			Entity.PropertyValue currentBound = null;
+			List<FilterSpec> filterList = filters.get(prop.getName());
+			boolean filtered = false;
 			if(filterList != null) {
 				// Property is filtered on - figure out the appropriate bounds
-				int cmp = 0;
-				for(FilterSpec filter : this.filters.get(prop.getName())) {
-					if(currentBound != null)
-						cmp = PropertyValueComparator.instance.compare(filter.getValue(), currentBound);
+				Iterator<FilterSpec> iter = filterList.iterator();
+			filters:
+				while(iter.hasNext()) {
+					FilterSpec filter = iter.next();
 					switch(filter.getOperator()) {
 					case 1: // Less than
-						if(currentDirection == -1 && (currentBound == null || cmp > 0)) {
-							currentBound = filter.getValue();
+						if(currentDirection == -1) {
+							iter.remove();
+							bounds.add(filter.getValue());
 							exclusiveBound = true;
+							filtered = true;
+							break filters;
 						}
 						break;
 					case 2: // Less than or equal
-						if(currentDirection == -1 && (currentBound == null || cmp >= 0)) {
-							currentBound = filter.getValue();
+						if(currentDirection == -1) {
+							iter.remove();
+							bounds.add(filter.getValue());
 							exclusiveBound = false;
+							filtered = true;
+							break filters;
 						}
 						break;
 					case 3: // Greater than
-						if(currentDirection == 1 && (currentBound == null || cmp < 0)) {
-							currentBound = filter.getValue();
+						if(currentDirection == 1) {
+							iter.remove();
+							bounds.add(filter.getValue());
 							exclusiveBound = true;
+							filtered = true;
+							break filters;
 						}
 						break;
 					case 4: // Greater than or equal
-						if(currentDirection == 1 && (currentBound == null || cmp <= 0)) {
-							currentBound = filter.getValue();
+						if(currentDirection == 1) {
+							iter.remove();
+							bounds.add(filter.getValue());
 							exclusiveBound = false;
+							filtered = true;
+							break filters;
 						}
 						break;
 					case 5: // Equal
-						currentBound = filter.getValue();
+						iter.remove();
+						bounds.add(filter.getValue());
+						exclusiveBound = false;
+						filtered = true;
+						break filters;
 					}
 				}
-				if(currentBound != null)
-					bounds.add(currentBound);
+				if(filters.get(prop.getName()).size() == 0)
+					filters.remove(prop.getName());
 			}
-			if(currentBound == null) {
+			if(!filtered) {
 				// First unfiltered property - add a sentinel if it's the upper bound
 				if(currentDirection == -1)
 					bounds.add(Entity.PropertyValue.getDefaultInstance());
