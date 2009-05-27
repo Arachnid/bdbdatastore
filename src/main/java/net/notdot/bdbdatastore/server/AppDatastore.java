@@ -24,6 +24,7 @@ import com.google.appengine.datastore_v3.DatastoreV3;
 import com.google.appengine.datastore_v3.DatastoreV3.CompositeIndices;
 import com.google.appengine.datastore_v3.DatastoreV3.Query;
 import com.google.appengine.datastore_v3.DatastoreV3.Schema;
+import com.google.appengine.datastore_v3.DatastoreV3.Query.Order;
 import com.google.appengine.entity.Entity;
 import com.google.appengine.entity.Entity.CompositeIndex;
 import com.google.appengine.entity.Entity.EntityProto;
@@ -463,8 +464,11 @@ public class AppDatastore {
 	private AbstractDatastoreResultSet getEntityQueryPlan(QuerySpec query) throws DatabaseException {
 		if(query.hasAncestor() || query.getOrders().size() > 1)
 			return null;
-		if(query.getOrders().size() == 1 && !query.getOrders().get(0).getProperty().equals(QuerySpec.KEY_PROPERTY))
-			return null;
+		if(query.getOrders().size() == 1) {
+			Order order = query.getOrders().get(0);
+			if(!order.getProperty().equals(QuerySpec.KEY_PROPERTY) || order.getDirection() != DatastoreV3.Query.Order.Direction.ASCENDING.getNumber())
+				return null;
+		}
 		
 		Indexing.EntityKey keyPrefix = Indexing.EntityKey.newBuilder()
 			.setKind(query.getKind())
