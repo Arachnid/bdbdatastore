@@ -461,7 +461,9 @@ public class AppDatastore {
 
 	/* Attempts to generate a query plan for a scan by entity only */
 	private AbstractDatastoreResultSet getEntityQueryPlan(QuerySpec query) throws DatabaseException {
-		if(query.hasAncestor() || query.getOrders().size() > 0)
+		if(query.hasAncestor() || query.getOrders().size() > 1)
+			return null;
+		if(query.getOrders().size() == 1 && !query.getOrders().get(0).getProperty().equals(QuerySpec.KEY_PROPERTY))
 			return null;
 		
 		Indexing.EntityKey keyPrefix = Indexing.EntityKey.newBuilder()
