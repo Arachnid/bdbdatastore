@@ -34,7 +34,6 @@ import com.google.appengine.entity.Entity.Reference;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.RpcCallback;
-import com.sleepycat.je.Cursor;
 import com.sleepycat.je.CursorConfig;
 import com.sleepycat.je.Database;
 import com.sleepycat.je.DatabaseConfig;
@@ -43,7 +42,6 @@ import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.EnvironmentLockedException;
-import com.sleepycat.je.JoinCursor;
 import com.sleepycat.je.OperationStatus;
 import com.sleepycat.je.SecondaryConfig;
 import com.sleepycat.je.SecondaryCursor;
@@ -351,9 +349,8 @@ public class AppDatastore {
 			upperBound.setAncestor(query.getAncestor().getPath());
 		}
 		
-		Cursor cursor = idxDb.openCursor(null, this.getCursorConfig());
 		MessagePredicate predicate = new CompositeIndexPredicate(idx, upperBound.build(), exclusiveMax);
-		return new DatastoreResultSet(cursor, lowerBound.build(), exclusiveMin, query, predicate);
+		return new DatastoreIndexResultSet(this, idxDb, lowerBound.build(), exclusiveMin, query, predicate);
 	}
 
 	/* Attempts to generate a merge join multiple-equality query. */
@@ -378,33 +375,18 @@ public class AppDatastore {
 		if(values.size() != index.getPropertyCount())
 			return null;
 		
-		// Construct the required cursors
-		Cursor[] cursors = new Cursor[values.size()];
+		// Construct the required keys
+		byte[][] keys = new byte[values.size()][];
 		for(int i = 0; i < values.size(); i++) {
 			Indexing.PropertyIndexKey startKey = Indexing.PropertyIndexKey.newBuilder()
 				.setKind(index.getEntityType())
 				.setName(index.getProperty(i).getName())
 				.setValue(values.get(i))
 				.build();
-			cursors[i] = this.entities_by_property.openCursor(null, this.getCursorConfig());
-			
-			// Find the requested entry
-			DatabaseEntry key = new DatabaseEntry(startKey.toByteArray());
-			DatabaseEntry data = new DatabaseEntry();
-			OperationStatus status = cursors[i].getSearchKey(key, data, null);
-			// If we can't find it, the whole query returns 0 results
-			if(status != OperationStatus.SUCCESS) {
-				// Close any cursors we already opened
-				for(int j = 0; j <= i; j++) 
-					cursors[i].close();
-				return new EmptyDatastoreResultSet(query);
-			}
+			keys[i] = startKey.toByteArray();
 		}
 		
-		// Construct a join cursor
-		JoinCursor cursor = this.entities.join(cursors, null);
-		
-		return new JoinedDatastoreResultSet(cursor, query, cursors);
+		return new JoinedDatastoreResultSet(this, query, keys);
 	}
 	
 	/* Attempts to generate a query on a single-property index. */
@@ -442,9 +424,8 @@ public class AppDatastore {
 			return null;
 		}
 		
-		Cursor cursor = this.entities_by_property.openCursor(null, this.getCursorConfig());
 		MessagePredicate predicate = new PropertyIndexPredicate(upperBound.build(), exclusiveMax);
-		return new DatastoreResultSet(cursor, lowerBound.build(), exclusiveMin, query, predicate);
+		return new DatastoreIndexResultSet(this, this.entities_by_property, lowerBound.build(), exclusiveMin, query, predicate);
 	}
 
 
@@ -518,8 +499,7 @@ public class AppDatastore {
 		if(endKey != null && predicate.evaluate(endKey))
 			predicate = new KeyRangePredicate(endKey, upperExclusive);
 		
-		Cursor cursor = this.entities.openCursor(null, this.getCursorConfig());
-		return new DatastoreResultSet(cursor, startKey, lowerExclusive, query, predicate);
+		return new DatastorePKResultSet(this, startKey, lowerExclusive, query, predicate);
 	}
 
 	public boolean deleteIndex(CompositeIndex idx) throws DatabaseException {
@@ -608,7 +588,7 @@ public class AppDatastore {
 		return schema.build();
 	}
 
-	private CursorConfig getCursorConfig() {
+	protected CursorConfig getCursorConfig() {
 		return CursorConfig.READ_COMMITTED;
 	}
 }

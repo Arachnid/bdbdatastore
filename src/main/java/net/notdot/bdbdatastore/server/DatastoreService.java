@@ -61,11 +61,6 @@ public class DatastoreService extends
 	
 	public void close() {
 		try {
-			// Close any open cursors
-			for(AbstractDatastoreResultSet cursor : this.cursors.values())
-				cursor.close();
-			this.cursors.clear();
-	
 			// Clean up any outstanding transactions
 			for(Transaction tx : this.transactions.values())
 				if(tx != null)
@@ -169,11 +164,14 @@ public class DatastoreService extends
 		
 		try {
 			AbstractDatastoreResultSet cursor = ds.executeQuery(request);
+			cursor.openCursor();
+
 			int i = 0;
-			while(cursor.getNext() != null)
+			while(cursor.read())
 				i++;
 			done.run(ApiBase.Integer64Proto.newBuilder().setValue(i).build());
-			cursor.close();
+			
+			cursor.closeCursor();
 		} catch (DatabaseException ex) {
 			throw new RpcFailedError(ex, DatastoreV3.Error.ErrorCode.INTERNAL_ERROR.getNumber());
 		}		
@@ -236,12 +234,7 @@ public class DatastoreService extends
 			this.cursors.remove(request);
 		}
 		
-		try {
-			cursor.close();
-			done.run(ApiBase.VoidProto.getDefaultInstance());
-		} catch(DatabaseException ex) {
-			throw new RpcFailedError(ex, DatastoreV3.Error.ErrorCode.INTERNAL_ERROR.getNumber());
-		}
+		done.run(ApiBase.VoidProto.getDefaultInstance());
 	}
 
 	@Override
@@ -333,7 +326,9 @@ public class DatastoreService extends
 		
 		try {
 			response.setCursor(request.getCursor());
+			cursor.openCursor();
 			response.addAllResult(cursor.getNext(request.getCount()));
+			cursor.closeCursor();
 			response.setMoreResults(cursor.hasMore());
 			
 			done.run(response.build());

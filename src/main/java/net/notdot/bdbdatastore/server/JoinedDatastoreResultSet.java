@@ -2,10 +2,8 @@ package net.notdot.bdbdatastore.server;
 
 
 
-import net.notdot.bdbdatastore.Indexing;
+import java.util.Arrays;
 
-import com.google.appengine.entity.Entity;
-import com.google.protobuf.InvalidProtocolBufferException;
 import com.sleepycat.je.Cursor;
 import com.sleepycat.je.DatabaseEntry;
 import com.sleepycat.je.DatabaseException;
@@ -13,56 +11,82 @@ import com.sleepycat.je.JoinCursor;
 import com.sleepycat.je.OperationStatus;
 
 public class JoinedDatastoreResultSet extends AbstractDatastoreResultSet {
-	protected JoinCursor cursor;
-	protected Cursor[] gc = null;
+	protected JoinCursor joinCursor = null;
+	protected Cursor[] cursors = null;
+	protected byte[][] startKeys = null;
+	protected boolean positioned;
 	
-	public JoinedDatastoreResultSet(JoinCursor cur, QuerySpec query, Cursor[] gc) throws DatabaseException {
-		super(query);
-		this.cursor = cur;
-		this.gc = gc;
-
-		if(query.getOffset() > 0)
-			this.skip(query.getOffset());
+	public JoinedDatastoreResultSet(AppDatastore ds, QuerySpec query, byte[][] startKeys) throws DatabaseException {
+		super(ds, query);
+		this.startKeys = startKeys;
 	}
-	
-	protected boolean getNextInternal(DatabaseEntry key, DatabaseEntry data) throws DatabaseException {
-		if(remaining == 0)
-			return false;
-		
-		OperationStatus status = cursor.getNext(key, data, null);
+
+	@Override
+	protected void closeCursor() throws DatabaseException {
+		this.joinCursor.close();
+		this.joinCursor = null;
+		for(Cursor cur : this.cursors)
+			cur.close();
+		this.cursors = null;
+	}
+
+	@Override
+	protected void openCursor() throws DatabaseException {
+		positioned = false;
+	}
+
+	@Override
+	protected boolean readInternal() throws DatabaseException {
+		OperationStatus status;
+		if(!positioned) {
+			cursors = new Cursor[startKeys.length];
+			for(int i = 0; i < startKeys.length; i++) {
+				cursors[i] = ds.entities_by_property.openCursor(null, ds.getCursorConfig());
+				
+				// Find the requested entry
+				DatabaseEntry key = new DatabaseEntry(startKeys[i]);
+				if(this.currentValue != null) {
+					// Reopening the cursor
+					DatabaseEntry value = new DatabaseEntry(currentValue.getData());
+					status = cursors[i].getSearchBothRange(key, value, null);
+					if(status == OperationStatus.SUCCESS) {
+						if(Arrays.equals(startKeys[i], key.getData())) {
+							// Skip the last record we read last time
+							status = cursors[i].getNextDup(key, value, null);
+						} else {
+							// We reopened a cursor, but couldn't find anything.
+							status = OperationStatus.NOTFOUND;
+						}
+					}
+				} else {
+					// First use
+					DatabaseEntry value = new DatabaseEntry();
+					status = cursors[i].getSearchKey(key, value, null);
+				}
+				// If we can't find it, the whole query returns 0 results
+				if(status != OperationStatus.SUCCESS) {
+					// Close any cursors we already opened
+					for(int j = 0; j <= i; j++) 
+						cursors[i].close();
+					return false;
+				}
+			}
+			
+			// Construct a join cursor
+			joinCursor = ds.entities.join(cursors, null);
+			
+			positioned = true;
+		}
+
+		currentValue = new DatabaseEntry();
+		status = joinCursor.getNext(currentPKey, currentValue, null);
 		if(status == OperationStatus.SUCCESS) {
-			this.remaining--;
-			this.started = true;
 			return true;
 		} else if(status == OperationStatus.NOTFOUND) {
 			return false;
 		} else {
 			throw new DatabaseException(String.format("Failed to advance query cursor: returned %s", status));
 		}
-	}
-
-	protected Entity.EntityProto getNext() throws DatabaseException {
-		DatabaseEntry key = new DatabaseEntry();
-		DatabaseEntry value = new DatabaseEntry();
-		
-		while(true) {
-			if(!this.getNextInternal(key, value))
-				return null;
 			
-			try {
-				return Indexing.EntityData.parseFrom(value.getData()).getData();
-			} catch(InvalidProtocolBufferException ex) {
-				//TODO: Make this message more helpful somehow.
-				logger.error("Invalid protocol buffer encountered");
-			}
-		}
-	}
-
-	public void close() throws DatabaseException {
-		this.cursor.close();
-		if(this.gc != null) {
-			for(Cursor cur : this.gc)
-				cur.close();
-		}
 	}
 }
