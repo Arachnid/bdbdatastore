@@ -164,11 +164,11 @@ public class QuerySpec {
 
     public boolean getBounds(Entity.Index idx, int direction, List<Entity.PropertyValue> bounds) {
 		boolean exclusiveBound = false;
-		Map<ByteString, List<FilterSpec>> filters = new HashMap<ByteString, List<FilterSpec>>();
+		Map<ByteString, Iterator<FilterSpec>> filters = new HashMap<ByteString, Iterator<FilterSpec>>();
 
-		// Duplicate the filters list
+		// Create an iterator for each item in the list
 		for(Map.Entry<ByteString, List<FilterSpec>> entry : this.filters.entrySet())
-			filters.put(entry.getKey(), new ArrayList<FilterSpec>(entry.getValue()));
+			filters.put(entry.getKey(), entry.getValue().iterator());
 		
 		// Iterate through each property in the index
 		for(Entity.Index.Property prop : idx.getPropertyList()) {
@@ -178,12 +178,9 @@ public class QuerySpec {
 			int currentDirection = direction * (prop.getDirection()==Entity.Index.Property.Direction.ASCENDING?1:-1);
 			
 			// Get an iterator for all the filters for this property
-			List<FilterSpec> filterList = filters.get(prop.getName());
-			Iterator<FilterSpec> iter = null;
+			Iterator<FilterSpec> iter = filters.get(prop.getName());
 			FilterSpec filter = null;
-			if(filterList != null) {
-				// Property is filtered on - figure out the appropriate bounds
-				iter = filterList.iterator();
+			if(iter != null) {
 			filters:
 				// Iterate over the filters until we find a filter that fits the slot
 				while(iter.hasNext()) {
@@ -225,9 +222,7 @@ public class QuerySpec {
 				}
 			}
 			if(filtered) {
-				// Remove the filter, since it's used, and add it as a bound
-				iter.remove();
-				if(filters.get(prop.getName()).size() == 0)
+				if(!iter.hasNext())
 					filters.remove(prop.getName());
 				bounds.add(filter.getValue());
 			} else {

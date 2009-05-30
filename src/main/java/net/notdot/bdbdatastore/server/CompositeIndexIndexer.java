@@ -34,6 +34,7 @@ public class CompositeIndexIndexer implements SecondaryMultiKeyCreator {
 		this.kind = idx.getEntityType();
 		this.hasAncestor = idx.getAncestor();
 		
+		// Construct a lookup table of names to offsets in the index key
 		for(int i = 0; i < idx.getPropertyCount(); i++) {
 			if(idx.getProperty(i).getName().equals(QuerySpec.KEY_PROPERTY))
 				this.keyIndex = i;
