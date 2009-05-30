@@ -95,6 +95,9 @@ public class ProtoRpcHandler extends SimpleChannelHandler {
 				logger.error("Internal error: ", ex.getCause());
 			}
 			controller.setFailed(ex.getMessage(), ex.getApplicationError());
+		} catch(Throwable t) {
+			logger.error("Internal error: ", t);
+			controller.setFailed(t.getMessage());
 		}
 		if(!controller.isResponseSent()) {
 			controller.sendResponse(Rpc.Response.newBuilder()
