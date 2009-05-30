@@ -170,71 +170,74 @@ public class QuerySpec {
 		for(Map.Entry<ByteString, List<FilterSpec>> entry : this.filters.entrySet())
 			filters.put(entry.getKey(), new ArrayList<FilterSpec>(entry.getValue()));
 		
+		// Iterate through each property in the index
 		for(Entity.Index.Property prop : idx.getPropertyList()) {
-			int currentDirection = direction * (prop.getDirection()==Entity.Index.Property.Direction.ASCENDING?1:-1);
-			List<FilterSpec> filterList = filters.get(prop.getName());
 			boolean filtered = false;
+
+			// Find the effective sort direction
+			int currentDirection = direction * (prop.getDirection()==Entity.Index.Property.Direction.ASCENDING?1:-1);
+			
+			// Get an iterator for all the filters for this property
+			List<FilterSpec> filterList = filters.get(prop.getName());
+			Iterator<FilterSpec> iter = null;
+			FilterSpec filter = null;
 			if(filterList != null) {
 				// Property is filtered on - figure out the appropriate bounds
-				Iterator<FilterSpec> iter = filterList.iterator();
+				iter = filterList.iterator();
 			filters:
+				// Iterate over the filters until we find a filter that fits the slot
 				while(iter.hasNext()) {
-					FilterSpec filter = iter.next();
+					filter = iter.next();
 					switch(filter.getOperator()) {
 					case 1: // Less than
 						if(currentDirection == -1) {
-							iter.remove();
-							bounds.add(filter.getValue());
-							exclusiveBound = true;
 							filtered = true;
+							exclusiveBound = true;
 							break filters;
 						}
 						break;
 					case 2: // Less than or equal
 						if(currentDirection == -1) {
-							iter.remove();
-							bounds.add(filter.getValue());
-							exclusiveBound = false;
 							filtered = true;
+							exclusiveBound = false;
 							break filters;
 						}
 						break;
 					case 3: // Greater than
 						if(currentDirection == 1) {
-							iter.remove();
-							bounds.add(filter.getValue());
-							exclusiveBound = true;
 							filtered = true;
+							exclusiveBound = true;
 							break filters;
 						}
 						break;
 					case 4: // Greater than or equal
 						if(currentDirection == 1) {
-							iter.remove();
-							bounds.add(filter.getValue());
-							exclusiveBound = false;
 							filtered = true;
+							exclusiveBound = false;
 							break filters;
 						}
 						break;
 					case 5: // Equal
-						iter.remove();
-						bounds.add(filter.getValue());
-						exclusiveBound = false;
 						filtered = true;
+						exclusiveBound = false;
 						break filters;
 					}
 				}
+			}
+			if(filtered) {
+				// Remove the filter, since it's used, and add it as a bound
+				iter.remove();
 				if(filters.get(prop.getName()).size() == 0)
 					filters.remove(prop.getName());
-			}
-			if(!filtered) {
+				bounds.add(filter.getValue());
+			} else {
 				// First unfiltered property - add a sentinel if it's the upper bound
 				if(currentDirection == -1)
 					bounds.add(Entity.PropertyValue.getDefaultInstance());
 				return exclusiveBound;
 			}
 		}
+		// TODO: Check for unused filters and error
 		return exclusiveBound;
 	}
 

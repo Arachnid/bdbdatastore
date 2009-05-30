@@ -1,6 +1,7 @@
 package net.notdot.bdbdatastore.server;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +34,11 @@ public class FilterSpec implements Comparable<FilterSpec> {
 				filters.add(new FilterSpec(prop.getName(), filter.getOp(), prop.getValue()));
 			}
 		}
+		
+		// Sort filters for each property so they can be used in indexes.
+		for(List<FilterSpec> fl : ret.values())
+			Collections.sort(fl);
+		
 		return ret;
 	}
 	
