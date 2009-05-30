@@ -164,14 +164,16 @@ public class DatastoreService extends
 		
 		try {
 			AbstractDatastoreResultSet cursor = ds.executeQuery(request);
-			cursor.openCursor();
-
 			int i = 0;
-			while(cursor.read())
-				i++;
+			cursor.openCursor();
+			try {
+				while(cursor.read())
+					i++;
+			} finally {
+				cursor.closeCursor();
+			}
 			done.run(ApiBase.Integer64Proto.newBuilder().setValue(i).build());
 			
-			cursor.closeCursor();
 		} catch (DatabaseException ex) {
 			throw new RpcFailedError(ex, DatastoreV3.Error.ErrorCode.INTERNAL_ERROR.getNumber());
 		}		
@@ -327,8 +329,11 @@ public class DatastoreService extends
 		try {
 			response.setCursor(request.getCursor());
 			cursor.openCursor();
-			response.addAllResult(cursor.getNext(request.getCount()));
-			cursor.closeCursor();
+			try {
+				response.addAllResult(cursor.getNext(request.getCount()));
+			} finally {
+				cursor.closeCursor();
+			}
 			response.setMoreResults(cursor.hasMore());
 			
 			done.run(response.build());

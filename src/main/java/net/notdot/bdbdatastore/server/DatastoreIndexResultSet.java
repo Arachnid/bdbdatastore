@@ -33,6 +33,7 @@ public class DatastoreIndexResultSet extends AbstractDatastoreResultSet {
 	@Override
 	protected void closeCursor() throws DatabaseException {
 		this.cursor.close();
+		this.cursor = null;
 	}
 
 	@Override
