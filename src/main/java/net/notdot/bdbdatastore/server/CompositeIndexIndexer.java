@@ -1,6 +1,7 @@
 package net.notdot.bdbdatastore.server;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
@@ -12,7 +13,7 @@ import org.slf4j.LoggerFactory;
 import net.notdot.bdbdatastore.Indexing;
 
 import com.google.appengine.entity.Entity;
-import com.google.appengine.entity.Entity.PropertyValue;
+import com.google.appengine.entity.Entity.Property;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.sleepycat.je.DatabaseEntry;
@@ -25,24 +26,18 @@ public class CompositeIndexIndexer implements SecondaryMultiKeyCreator {
 
 	private ByteString kind;
 	private boolean hasAncestor;
-	// Maps property names to offsets in the index key
-	private Map<ByteString, Integer> fields = new HashMap<ByteString, Integer>();
-	// Index of the __key__ property, or -1 if none.
-	private int keyIndex = -1;
+	private ByteString[] fields;
 	
 	public CompositeIndexIndexer(Entity.Index idx) {
 		this.kind = idx.getEntityType();
 		this.hasAncestor = idx.getAncestor();
 		
-		// Construct a lookup table of names to offsets in the index key
-		for(int i = 0; i < idx.getPropertyCount(); i++) {
-			if(idx.getProperty(i).getName().equals(QuerySpec.KEY_PROPERTY))
-				this.keyIndex = i;
-			this.fields.put(idx.getProperty(i).getName(), new Integer(i));
-		}
+		// Store the list of field names
+		this.fields = new ByteString[idx.getPropertyCount()];
+		for(int i = 0; i < idx.getPropertyCount(); i++)
+			this.fields[i] = idx.getProperty(i).getName();
 	}
 
-	@SuppressWarnings("unchecked")
 	public void createSecondaryKeys(SecondaryDatabase secondary,
 			DatabaseEntry key, DatabaseEntry data, Set<DatabaseEntry> results)
 			throws DatabaseException {
@@ -61,73 +56,81 @@ public class CompositeIndexIndexer implements SecondaryMultiKeyCreator {
 		if(!kind.equals(this.kind))
 			return;
 		
-		// Create a list for each property value
-		List<Entity.PropertyValue>[] lists = new List[this.fields.size()];
-		Indexing.CompositeIndexKey.Builder entry = Indexing.CompositeIndexKey.newBuilder();
-		for(int i = 0; i < this.fields.size(); i++) {
-			lists[i] = new ArrayList<Entity.PropertyValue>();
-			entry.addValue(Entity.PropertyValue.getDefaultInstance());
-		}
+		// Get a sorted list of properties
+		List<Entity.Property> properties = new ArrayList<Entity.Property>(entity.getPropertyList());
+		Collections.sort(properties, PropertyComparator.instance);
 		
-		// Set the key property, if any
-		if(this.keyIndex != -1)
-			lists[this.keyIndex].add(EntityKeyComparator.toPropertyValue(entity.getKey()));
-
-		// Populate the lists
-		ByteString current = null;
-		int current_idx = -1;
-		for(Entity.Property value : entity.getPropertyList()) {
-			// Properties are sorted by name, so we can use this optimization
-			if(!value.getName().equals(current)) {
-				current = value.getName();
-				Integer idx = this.fields.get(current);
-				current_idx = (idx==null)?-1:idx;
+		// Add pseudo-properties
+		properties.add(Entity.Property.newBuilder()
+				.setName(QuerySpec.KEY_PROPERTY)
+				.setValue(EntityKeyComparator.toPropertyValue(entity.getKey()))
+				.build());
+		
+		// Construct a map of field name to first occurrence
+		Map<ByteString, Integer> fieldMap = new HashMap<ByteString, Integer>(properties.size());
+		ByteString currentName = null;
+		for(int i = 0; i < properties.size(); i++) {
+			Entity.Property currentProperty = properties.get(i);
+			if(!currentProperty.getName().equals(currentName)) {
+				currentName = currentProperty.getName();
+				fieldMap.put(currentName, i);
 			}
-			if(current_idx != -1)
-				lists[current_idx].add(value.getValue());
 		}
 		
-		// Generate all the index entries
-		int count;
-		int max = DatastoreServer.properties.getInt("datastore.max_index_entries", 1000);
 		if(this.hasAncestor) {
-			count = this.generateAncestorEntries(path, results, entry, lists, max);
+			this.generateAncestorEntries(results, entity, properties, fieldMap);
 		} else {
-			count = this.generateEntries(results, entry, lists, 0, max);
-		}
-		if(count >= max) {
-			logger.warn("Truncating index entries for {} at {}", entity.getKey(), count);
+			this.generateEntries(results, properties, fieldMap, Indexing.CompositeIndexKey.newBuilder(), 0);
 		}
 	}
 
-	private int generateAncestorEntries(Entity.Path path, Set<DatabaseEntry> results,
-			Indexing.CompositeIndexKey.Builder entry, List<PropertyValue>[] lists, int max) {
-		int count = 0;
-		Entity.Path.Builder subpath = Entity.Path.newBuilder();
-		for(int i = 0; i < path.getElementCount(); i++) {
-			subpath.addElement(path.getElement(i));
-			entry.setAncestor(subpath.clone());
-			count += generateEntries(results, entry, lists, 0, max - count);
-			if(count >= max)
+	private void generateEntries(Set<DatabaseEntry> results, List<Property> properties,
+			Map<ByteString, Integer> fieldMap, Indexing.CompositeIndexKey.Builder current, int idx) {
+		ByteString field = this.fields[idx];
+		if(!fieldMap.containsKey(field))
+			// Entity does not contain all fields from index.
+			return;
+		
+		int initialOffset = fieldMap.get(field);
+		
+		// Step through the list of properties until we find one
+		// with a different name to the one we're handling.
+		for(int i = initialOffset; i < properties.size(); i++) {
+			Property currentProperty = properties.get(i);
+			if(!currentProperty.getName().equals(field))
 				break;
-		}
-		return count;
-	}
-
-	private int generateEntries(Set<DatabaseEntry> results, Indexing.CompositeIndexKey.Builder entry,
-			List<PropertyValue>[] lists, int idx, int max) {
-		int count = 0;
-		for(PropertyValue value : lists[idx]) {
-			entry.setValue(idx, value);
-			if(idx == lists.length - 1) {
-				results.add(new DatabaseEntry(entry.clone().build().toByteArray()));
-				count++;
+			
+			// Ensure any recursive invocations pick the next element in the list
+			fieldMap.put(field, i + 1);
+			
+			// Recurse
+			Indexing.CompositeIndexKey.Builder newEntry = current.clone().addValue(currentProperty.getValue());
+			if(idx + 1 == this.fields.length) {
+				results.add(new DatabaseEntry(newEntry.build().toByteArray()));
 			} else {
-				count += generateEntries(results, entry, lists, idx + 1, max - count);
+				generateEntries(results, properties, fieldMap, newEntry, idx + 1);
 			}
-			if(count >= max)
-				break;
 		}
-		return count;
+		
+		// Restore the original value for this element of the fieldMap
+		fieldMap.put(field, initialOffset);
+	}
+
+	private void generateAncestorEntries(Set<DatabaseEntry> results, Entity.EntityProto entity,
+			List<Property> properties, Map<ByteString, Integer> fieldMap) {
+		Entity.Path.Builder ancestor = Entity.Path.newBuilder();
+		
+		List<Entity.Path.Element> elements = entity.getKey().getPath().getElementList();
+		for(int i = 0; i < elements.size() - 1; i++) {
+			ancestor.addElement(elements.get(i));
+			Indexing.CompositeIndexKey.Builder newEntry = Indexing.CompositeIndexKey.newBuilder();
+			newEntry.setAncestor(ancestor.clone());
+			if(this.fields.length == 0) {
+				// Ancestor-only index
+				results.add(new DatabaseEntry(newEntry.build().toByteArray()));
+			} else {
+				generateEntries(results, properties, fieldMap, newEntry, 0);
+			}
+		}
 	}
 }
