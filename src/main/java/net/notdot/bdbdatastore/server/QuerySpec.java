@@ -40,12 +40,24 @@ public class QuerySpec {
 		qs.kind = query.getKind();
 		if(query.hasAncestor())
 			qs.ancestor = query.getAncestor();
-		qs.filters = FilterSpec.FromQuery(query);
-		qs.orders = query.getOrderList();
 		if(query.hasOffset())
 			qs.offset = query.getOffset();
 		if(query.hasLimit())
 			qs.limit = query.getLimit();
+
+		qs.filters = FilterSpec.FromQuery(query);
+
+		qs.orders = new ArrayList<DatastoreV3.Query.Order>(query.getOrderList());
+		// Eliminate any orders that match equality filters
+		for(Iterator<DatastoreV3.Query.Order> iter = qs.orders.iterator(); iter.hasNext();) {
+			DatastoreV3.Query.Order order = iter.next();
+			List<FilterSpec> orderFilters = qs.filters.get(order.getProperty());
+			if(orderFilters != null)
+				for(FilterSpec filter : orderFilters)
+					if(filter.getOperator() == DatastoreV3.Query.Filter.Operator.EQUAL.getNumber())
+						iter.remove();
+		}
+		
 		return qs;
 	}
 	
