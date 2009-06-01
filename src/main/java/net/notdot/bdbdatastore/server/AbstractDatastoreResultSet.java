@@ -18,7 +18,7 @@ import com.sleepycat.je.DatabaseException;
 public abstract class AbstractDatastoreResultSet {
 	static final Logger logger = LoggerFactory.getLogger(DatastorePKResultSet.class);
 	
-	private int remaining = -1;
+	private int remaining = 0;
 	private Set<Indexing.EntityKey> seen = new HashSet<Indexing.EntityKey>();
 	private boolean initialized = false;
 	
@@ -31,7 +31,8 @@ public abstract class AbstractDatastoreResultSet {
 	public AbstractDatastoreResultSet(AppDatastore ds, QuerySpec query) throws DatabaseException {
 		this.ds = ds;
 		this.query = query;
-		this.remaining = query.getOffset() + query.getLimit();
+		if(query != null)
+			this.remaining = query.getOffset() + query.getLimit();
 	}
 	
 	// Opens the internal cursor for reading, positioning it for the next result

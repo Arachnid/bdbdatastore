@@ -31,21 +31,25 @@ public class QuerySpec {
 	private List<DatastoreV3.Query.Order> ordered_properties = null;
 	private boolean hasInequalities = false;
 	
-	public QuerySpec(DatastoreV3.Query query) {
-		this.app = query.getApp();
+	public static QuerySpec build(DatastoreV3.Query query) {
+		QuerySpec qs = new QuerySpec();
+		qs.app = query.getApp();
 		if(!query.hasKind())
 			throw new RpcFailedError("Queries must specify a kind",
 					DatastoreV3.Error.ErrorCode.BAD_REQUEST.getNumber());
-		this.kind = query.getKind();
+		qs.kind = query.getKind();
 		if(query.hasAncestor())
-			this.ancestor = query.getAncestor();
-		this.filters = FilterSpec.FromQuery(query);
-		this.orders = query.getOrderList();
+			qs.ancestor = query.getAncestor();
+		qs.filters = FilterSpec.FromQuery(query);
+		qs.orders = query.getOrderList();
 		if(query.hasOffset())
-			this.offset = query.getOffset();
+			qs.offset = query.getOffset();
 		if(query.hasLimit())
-			this.limit = query.getLimit();
+			qs.limit = query.getLimit();
+		return qs;
 	}
+	
+	private QuerySpec() { }
 	
 	private void buildMatchData() {
 		if(unordered_properties != null)
@@ -80,6 +84,9 @@ public class QuerySpec {
 	}
 	
 	public boolean isValidIndex(Entity.Index index) {
+		if(this.filters == null)
+			return false;
+		
 		this.buildMatchData();
 		
 		if(!index.getEntityType().equals(this.kind))
@@ -119,6 +126,9 @@ public class QuerySpec {
 	}
 
 	public Entity.Index getIndex() {
+		if(this.filters == null)
+			return null;
+		
 		if(this.index == null) {
 			Entity.Index.Builder builder = Entity.Index.newBuilder();
 			builder.setEntityType(this.kind);
@@ -163,6 +173,9 @@ public class QuerySpec {
 	}
 
     public boolean getBounds(Entity.Index idx, int direction, List<Entity.PropertyValue> bounds) {
+    	if(this.filters == null)
+    		return false;
+    	
 		boolean exclusiveBound = false;
 		Map<ByteString, Iterator<FilterSpec>> filters = new HashMap<ByteString, Iterator<FilterSpec>>();
 

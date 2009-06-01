@@ -8,6 +8,7 @@ import java.util.Map;
 
 import com.google.appengine.datastore_v3.DatastoreV3;
 import com.google.appengine.entity.Entity;
+import com.google.appengine.entity.Entity.PropertyValue;
 import com.google.protobuf.ByteString;
 
 public class FilterSpec implements Comparable<FilterSpec> {
@@ -35,6 +36,65 @@ public class FilterSpec implements Comparable<FilterSpec> {
 			}
 		}
 		
+		// Remove any redundant filters
+		for(List<FilterSpec> filters : ret.values()) {
+			FilterSpec minBound = null;
+			FilterSpec maxBound = null;
+			boolean hasEquality = false;
+			
+			for(int i = filters.size() - 1; i >= 0; i--) {
+				FilterSpec filter = filters.get(i);
+				Entity.PropertyValue value = filter.getValue();
+				
+				if(!evaluateFilter(minBound, value)) {
+					if(filter.getOperator() == DatastoreV3.Query.Filter.Operator.GREATER_THAN.getNumber()
+					   || filter.getOperator() == DatastoreV3.Query.Filter.Operator.GREATER_THAN_OR_EQUAL.getNumber()) {
+						// Filter is redundant
+						filters.remove(i);
+					} else {
+						// Filter is contradictory
+						return null;
+					}
+				} else if(!evaluateFilter(maxBound, value)) {
+					if(filter.getOperator() == DatastoreV3.Query.Filter.Operator.LESS_THAN.getNumber()
+					   || filter.getOperator() == DatastoreV3.Query.Filter.Operator.LESS_THAN_OR_EQUAL.getNumber()) {
+						// Filter is redundant
+						filters.remove(i);
+					} else {
+						// Filter is contradictory
+						return null;
+					}
+				} else {
+					// Check if this filter provides a tighter bound than we've already seen
+					switch(filter.getOperator()) {
+					case 1: // LESS_THAN
+					case 2: // LESS_THAN_OR_EQUAL
+						if(maxBound != null)
+							filters.remove(maxBound);
+						maxBound = filter;
+						break;
+					case 3: // GREATER_THAN
+					case 4: // GREATER_THAN_OR_EQUAL
+						if(minBound != null)
+							filters.remove(minBound);
+						minBound = filter;
+						break;
+					case 5: // EQUAL
+						hasEquality = true;
+						break;
+					}
+				}
+			}
+			
+			if(hasEquality) {
+				// In the presence of equality filters, inequalities are extraneous
+				if(minBound != null)
+					filters.remove(minBound);
+				if(maxBound != null)
+					filters.remove(maxBound);
+			}
+		}
+		
 		// Sort filters for each property so they can be used in indexes.
 		for(List<FilterSpec> fl : ret.values())
 			Collections.sort(fl);
@@ -42,6 +102,28 @@ public class FilterSpec implements Comparable<FilterSpec> {
 		return ret;
 	}
 	
+	private static boolean evaluateFilter(FilterSpec filter, PropertyValue value) {
+		if(filter == null)
+			return true;
+		
+		int cmp = PropertyValueComparator.instance.compare(value, filter.getValue());
+		switch(filter.getOperator()) {
+		case 1: // LESS_THAN
+			return cmp < 0;
+		case 2: // LESS_THAN_OR_EQUAL
+			return cmp <= 0;
+		case 3: // GREATER_THAN
+			return cmp > 0;
+		case 4: // GREATER_THAN_OR_EQUAL
+			return cmp >= 0;
+		case 5: // EQUAL
+			return cmp == 0;
+		default:
+			// TODO: Better error handling
+			return false;
+		}
+	}
+
 	public ByteString getName() {
 		return name;
 	}

@@ -302,9 +302,13 @@ public class AppDatastore {
 	}
 
 	public AbstractDatastoreResultSet executeQuery(Query request) throws DatabaseException {
-		QuerySpec query = new QuerySpec(request);
+		AbstractDatastoreResultSet ret = null;
+		QuerySpec query = QuerySpec.build(request);
+		if(query.filters == null)
+			// Query can never return any results
+			return new EmptyDatastoreResultSet(this, query);
 		
-		AbstractDatastoreResultSet ret = getEntityQueryPlan(query);
+		ret = getEntityQueryPlan(query);
 		if(ret != null)
 			return ret;
 		ret = getAncestorQueryPlan(query);
