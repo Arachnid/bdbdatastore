@@ -23,10 +23,12 @@ public class JoinedDatastoreResultSet extends AbstractDatastoreResultSet {
 
 	@Override
 	protected void closeCursor() throws DatabaseException {
+		// joinCursor will not be set, if the first equality filter is not found
+		if (this.joinCursor == null) return;
 		this.joinCursor.close();
 		this.joinCursor = null;
 		for(Cursor cur : this.cursors)
-			cur.close();
+			 cur.close();
 		this.cursors = null;
 	}
 
@@ -65,9 +67,10 @@ public class JoinedDatastoreResultSet extends AbstractDatastoreResultSet {
 				}
 				// If we can't find it, the whole query returns 0 results
 				if(status != OperationStatus.SUCCESS) {
+					// The finally close should catch this
 					// Close any cursors we already opened
-					for(int j = 0; j <= i; j++) 
-						cursors[i].close();
+					//for(int j = 0; j <= i; j++) 
+						//cursors[i].close();
 					return false;
 				}
 			}

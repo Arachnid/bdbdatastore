@@ -88,7 +88,7 @@ public abstract class AbstractDatastoreResultSet {
 		List<Entity.EntityProto> entities = new ArrayList<Entity.EntityProto>(count);
 
 		for(int i = 0; i < count; i++) {
-			if(this.read()) {
+			if(this.hasMore() && this.read()) {
 				assert this.currentValue != null;
 				try {
 					Entity.EntityProto entity = Indexing.EntityData.parseFrom(currentValue.getData()).getData();

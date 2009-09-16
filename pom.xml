@@ -8,7 +8,8 @@
   <name>bdbdatastore</name>
   <url>http://maven.apache.org</url>
   <build>
-    <plugins>
+  	<defaultGoal>package</defaultGoal>
+  	<plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -17,18 +18,30 @@
           <target>1.5</target>
         </configuration>
       </plugin>
-      <plugin>
+     <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
-        <configuration>
-          <descriptorRefs>
-            <descriptorRef>jar-with-dependencies</descriptorRef>
-          </descriptorRefs>
-          <archive>
-            <manifest>
-              <mainClass>net.notdot.bdbdatastore.server.DatastoreServer</mainClass>
-            </manifest>
-          </archive>
-        </configuration>
+        <version>2.2-beta-2</version>
+        <executions>
+          <execution>
+            <id>create-executable-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <configuration>
+              <descriptorRefs>
+                <descriptorRef>
+                  jar-with-dependencies
+                </descriptorRef>
+              </descriptorRefs>
+              <archive>
+                <manifest>
+                  <mainClass>net.notdot.bdbdatastore.server.DatastoreServer</mainClass>
+                </manifest>
+              </archive>
+           </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

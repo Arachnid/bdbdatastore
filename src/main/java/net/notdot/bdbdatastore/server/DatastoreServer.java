@@ -67,6 +67,6 @@ public class DatastoreServer {
 		DatastoreServiceFactory ds_factory = new DatastoreServiceFactory(datastore);
 		bootstrap.setPipelineFactory(new ProtoRpcPipelineFactory(ds_factory, openChannels, max_pb_size));
 		bootstrap.bind(new InetSocketAddress(properties.getInt("datastore.port", 9123)));
-		logger.info("Server started.");
+		logger.info("Server started. debug=" + logger.isDebugEnabled());
 	}
 }
